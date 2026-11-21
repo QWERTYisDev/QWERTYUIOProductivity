@@ -16,9 +16,9 @@ choose all listed files, and commit.
 |---|---|---|
 | (root) | `/upload/main` | `package.json`, `vite.config.ts`, `tsconfig.json`, `wrangler.jsonc`, `.gitignore`, `index.html`, `README.md` |
 | `public` | `/upload/main/public` | `manifest.json`, `sw.js`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png` |
-| `src` | `/upload/main/src` | `main.tsx`, `App.tsx`, `store.ts`, `ui.tsx`, `styles.css` |
-| `src/logic` | `/upload/main/src/logic` | `types.ts`, `rand.ts`, `talents.ts`, `leveling.ts`, `character.ts`, `talentLogic.ts`, `tasks.ts`, `shop.ts`, `battle.ts`, `game.ts`, `storage.ts` |
-| `src/screens` | `/upload/main/src/screens` | `Home.tsx`, `Tasks.tsx`, `TaskRow.tsx`, `Shop.tsx`, `Create.tsx`, `Character.tsx`, `Talents.tsx`, `Battle.tsx` |
+| `src` | `/upload/main/src` | `main.tsx`, `App.tsx`, `store.ts`, `ui.tsx`, `sound.ts`, `styles.css` |
+| `src/logic` | `/upload/main/src/logic` | `types.ts`, `rand.ts`, `talents.ts`, `leveling.ts`, `character.ts`, `talentLogic.ts`, `tasks.ts`, `shop.ts`, `battle.ts`, `game.ts`, `storage.ts`, `stats.ts`, `achievements.ts` |
+| `src/screens` | `/upload/main/src/screens` | `Home.tsx`, `Tasks.tsx`, `TaskRow.tsx`, `Focus.tsx`, `Shop.tsx`, `Create.tsx`, `Character.tsx`, `Talents.tsx`, `Battle.tsx` |
 | `tests` (optional) | `/upload/main/tests` | `logic.test.ts` |
 
 `.gitignore` is a hidden file; if Files hides it, create it on GitHub with "Add file > Create new file" and paste the contents.
@@ -46,6 +46,18 @@ If your repo already holds the old app, delete the old `src`, `public`, `package
 - Quests: daily = once per local day; weekly = chosen weekdays (optional last day); one-time = once until you press Reset. Every completion is keyed (`taskId|date` or `taskId|once`), so repeated taps, refreshes and re-renders cannot pay twice.
 - Initial boss: 20/20/20/20, 10 HP, no talents, shown as Level 15.
 - Win: your character becomes the boss and the old boss goes to the archive. Loss: you go to the archive, boss unchanged. Then Gen +1 and a new Level 1 character.
+
+## Extras (cosmetic or convenience, no change to XP/level/talent/battle rules)
+
+- **Undo:** a completed quest can be undone for 15 seconds. It reverses exactly what it paid (XP, Gems, Gold, and level-up rewards). It refuses if those rewards were already spent.
+- **Streaks:** daily quests show consecutive days completed. Display only: there is no streak bonus.
+- **Achievements and titles:** Character > Titles. Cosmetic only.
+- **Checklists and presets:** a quest with a checklist completes (and pays) when every item is checked. Presets fill the new-quest form.
+- **Stats:** Character > Stats. Gold/Gems "earned" is derived as current balance plus everything spent.
+- **Shop:** categories, favourites pinned on top, per-day limits and limited stock.
+- **Backup reminder** after 14 days without a backup (snooze 3 days).
+- **Focus timer:** runs only while the app is open; it completes the quest when time is up. Cancelling does not complete it.
+- **Sound and haptics:** synthesized sounds, toggle under Character > System. iPhone Safari has no vibration API, so haptics use a Safari trick that works on iOS 17.4+ only.
 
 ## Checks
 
