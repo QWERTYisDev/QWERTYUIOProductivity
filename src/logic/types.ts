@@ -106,5 +106,6 @@ export interface Game {
 export type Ev =
   | { t: 'toast'; text: string; kind?: 'good' | 'bad' | 'info' }
   | { t: 'levelup'; level: number; levels: number }
-  | { t: 'reveal'; char: Character };
+  | { t: 'reveal'; char: Character }
+  | { t: 'talent'; id: string };
 export type Out = { g: Game; ev?: Ev[] };
