@@ -61,7 +61,9 @@ export default function Battle({ g }: { g: Game }) {
       )}
       {b.rounds.length > 1 && (
         <Panel title="Earlier rounds">
+          <div className="scrollbox">
           {[...b.rounds].slice(0, -1).reverse().map((r) => <div key={r.n}><p className="rn">Round {r.n}</p><RoundDetail r={r} pName={b.player.name} bName={b.boss.name} /></div>)}
+          </div>
         </Panel>
       )}
     </>

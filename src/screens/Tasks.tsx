@@ -2,12 +2,12 @@ import { useState } from 'react';
 import type { Game, Task, TaskType } from '../logic/types.ts';
 import { DAYS, activeOn, blankTask, dateKey, deleteTask, isDone, saveTask, sortTasks, validateTask, type SortKey } from '../logic/tasks.ts';
 import { act, toast } from '../store.ts';
-import { Modal, Panel } from '../ui.tsx';
+import { Modal, Panel, useSheet } from '../ui.tsx';
 import { TaskRow, useRecentlyDone } from './TaskRow.tsx';
 
 const ICONS = ['⚔️', '📚', '💪', '🏃', '🧘', '💧', '🧹', '💻', '📝', '🎯', '🍎', '🛌', '💰', '🎨', '📞', '🌱'];
 
-function TaskForm({ initial, onClose }: { initial: Task; onClose: () => void }) {
+function TaskForm({ initial, onClose, closing }: { initial: Task; onClose: () => void; closing: boolean }) {
   const [t, setT] = useState<Task>(initial);
   const [xp, setXp] = useState(String(initial.xp));
   const [gems, setGems] = useState(String(initial.gems));
@@ -23,7 +23,7 @@ function TaskForm({ initial, onClose }: { initial: Task; onClose: () => void }) 
     onClose();
   };
   return (
-    <Modal title={initial.name ? 'Edit Quest' : 'New Quest'} onClose={onClose}>
+    <Modal title={initial.name ? 'Edit Quest' : 'New Quest'} onClose={onClose} closing={closing}>
       <label>Name<input value={t.name} maxLength={60} onChange={(e) => up({ name: e.target.value })} /></label>
       <label>Description (optional)<textarea rows={2} value={t.desc} onChange={(e) => up({ desc: e.target.value })} /></label>
       <label>Type
@@ -63,7 +63,7 @@ export default function Tasks({ g, now }: { g: Game; now: Date }) {
   const [type, setType] = useState<'all' | TaskType>('all');
   const [status, setStatus] = useState<'all' | 'open' | 'done'>('all');
   const [sort, setSort] = useState<SortKey>('priority');
-  const [edit, setEdit] = useState<Task | null>(null);
+  const sheet = useSheet<Task>();
   const today = dateKey(now);
   const stay = useRecentlyDone(g);
   // Finished one-time quests disappear (view them with Status: Done). Open quests come first, then not-today, then done.
@@ -79,7 +79,7 @@ export default function Tasks({ g, now }: { g: Game; now: Date }) {
   ).sort((a, b) => rank(a) - rank(b));
   return (
     <>
-      <Panel title="Quests" right={<button className="btn sm" onClick={() => setEdit(blankTask(type === 'all' ? 'daily' : type))}>+ New</button>}>
+      <Panel title="Quests" right={<button className="btn sm" onClick={() => sheet.open(blankTask(type === 'all' ? 'daily' : type))}>+ New</button>}>
         <div className="chips">
           {(['all', 'daily', 'weekly', 'once'] as const).map((k) => <button key={k} className={'chip' + (type === k ? ' on' : '')} onClick={() => setType(k)}>{k === 'all' ? 'All' : k === 'once' ? 'One-time' : k[0].toUpperCase() + k.slice(1)}</button>)}
         </div>
@@ -89,12 +89,14 @@ export default function Tasks({ g, now }: { g: Game; now: Date }) {
         </div>
       </Panel>
       <Panel>
+        <div className="scrollbox">
         {list.length === 0 && <p className="dim">No quests match. Tap “+ New” to create one.</p>}
         {list.map((t) => (
-          <TaskRow key={t.id} t={t} g={g} now={now} onEdit={() => setEdit(t)} onDelete={() => window.confirm(`Delete “${t.name}”?`) && act((x) => deleteTask(x, t.id))} />
+          <TaskRow key={t.id} t={t} g={g} now={now} onEdit={() => sheet.open(t)} onDelete={() => window.confirm(`Delete “${t.name}”?`) && act((x) => deleteTask(x, t.id))} />
         ))}
+        </div>
       </Panel>
-      {edit && <TaskForm key={edit.id} initial={edit} onClose={() => setEdit(null)} />}
+      {sheet.v && <TaskForm key={sheet.v.id} initial={sheet.v} closing={sheet.closing} onClose={sheet.close} />}
     </>
   );
 }

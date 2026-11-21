@@ -22,7 +22,7 @@ function Sheet({ g }: { g: Game }) {
         <StatGrid c={c} onSpend={(s) => act((x) => spendStat(x, s))} />
       </Panel>
       <Panel title="Talents"><TalentChips c={c} /></Panel>
-      <Panel title="History">{[...c.log].reverse().map((l, i) => <p className="dim" key={i}>{l}</p>)}</Panel>
+      <Panel title="History"><div className="scrollbox">{[...c.log].reverse().map((l, i) => <p className="dim" key={i}>{l}</p>)}</div></Panel>
     </>
   );
 }
@@ -40,9 +40,11 @@ function CharEntry({ c, tag }: { c: Char; tag: string }) {
 function Archive({ g }: { g: Game }) {
   return (
     <Panel title="Character Archive">
+      <div className="scrollbox cards">
       <CharEntry c={g.boss} tag="Current boss" />
       {[...g.archive].reverse().map((c) => <CharEntry key={c.id + c.fate} c={c} tag={c.fate === 'fallen' ? 'Eliminated' : 'Defeated boss'} />)}
       {g.archive.length === 0 && <p className="dim">No fallen characters yet.</p>}
+      </div>
     </Panel>
   );
 }
@@ -50,6 +52,7 @@ function History({ g }: { g: Game }) {
   if (!g.battles.length) return <Panel title="Battle History"><p className="dim">No battles fought yet.</p></Panel>;
   return (
     <Panel title="Battle History">
+      <div className="scrollbox cards">
       {[...g.battles].reverse().map((b) => (
         <details className="entry" key={b.id}>
           <summary>
@@ -60,6 +63,7 @@ function History({ g }: { g: Game }) {
           {b.rounds.map((r) => <div key={r.n}><p className="rn">Round {r.n}</p><RoundDetail r={r} pName={b.player.name} bName={b.boss.name} /></div>)}
         </details>
       ))}
+      </div>
     </Panel>
   );
 }

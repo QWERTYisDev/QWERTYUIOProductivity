@@ -11,19 +11,29 @@ let dealt = ''; // last offer that played the deal animation, so revisiting the 
 function Hand({ offer, id }: { offer: string[]; id: string }) {
   const [fresh] = useState(dealt !== id);
   const [ready, setReady] = useState(!fresh);
+  const [picked, setPicked] = useState<string | null>(null);
   useEffect(() => {
     dealt = id;
     if (fresh) { const timer = setTimeout(() => setReady(true), 1300 + offer.length * 550 + 700); return () => clearTimeout(timer); }
   }, [id, fresh, offer.length]);
+  // Tap a card: it flares, the others dissolve, then the talent is applied and the "acquired" window opens.
+  const pick = (tid: string) => {
+    if (picked) return;
+    setPicked(tid);
+    setTimeout(() => act((x) => {
+      const g2 = pickTalent(x, tid);
+      return g2 === x ? { g: x } : { g: g2, ev: [{ t: 'talent', id: tid }] };
+    }), document.body.classList.contains('noanim') ? 0 : 950);
+  };
   return (
     <>
-      <p className="sysh">[ SELECT ONE ]</p>
-      <div className="hand">
+      <p className="sysh">{ready ? '[ TAP A CARD TO CHOOSE ]' : '[ TALENT HAND ]'}</p>
+      <div className={'hand' + (picked ? ' picked' : '')}>
         {offer.map((tid, i) => (
-          <div key={tid} className={`deal r-${TALENT_BY_ID[tid].rarity}${fresh ? ' fresh' : ''}`} style={{ '--i': i } as CSSProperties}>
+          <div key={tid} className={`deal r-${TALENT_BY_ID[tid].rarity}${fresh ? ' fresh' : ''}${picked === tid ? ' chosen' : ''}`} style={{ '--i': i } as CSSProperties}>
             <div className="deal-inner">
               <div className="dface back"><span /></div>
-              <div className="dface front"><TalentCard t={TALENT_BY_ID[tid]} onPick={ready ? () => act((x) => pickTalent(x, tid)) : undefined} /></div>
+              <div className="dface front"><TalentCard t={TALENT_BY_ID[tid]} onPick={ready && !picked ? () => pick(tid) : undefined} /></div>
             </div>
             <i className="beam" />
           </div>
@@ -63,10 +73,12 @@ export default function Talents({ g }: { g: Game }) {
       <Panel title="Your Talents"><TalentChips c={c} /></Panel>
       <Panel title={`Talent Catalog (${TALENTS.length})`}>
         <p className="dim">Requirements use base stats only. Percent bonuses apply after flat bonuses.</p>
+        <div className="scrollbox cards">
         {TALENTS.map((t) => {
           const n = owned(c, t.id);
           return <TalentCard key={t.id} t={t} note={`${n >= t.max ? 'Maxed' : meetsReq(c, t) ? 'Eligible' : 'Locked'} · owned ${n}/${t.max}`} />;
         })}
+        </div>
       </Panel>
     </>
   );
