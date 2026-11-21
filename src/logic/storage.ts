@@ -18,6 +18,8 @@ export function migrate(obj: any): Game {
   }
   if (typeof g.gold !== 'number' || typeof g.gems !== 'number' || typeof g.gen !== 'number') throw new Error('Save has invalid numbers.');
   g.completions = g.completions && typeof g.completions === 'object' ? g.completions : {};
+  g.shop = g.shop.map((i) => ({ ...i, gems: i.gems ?? 0 }));
+  g.purchases = g.purchases.map((p) => ({ ...p, gems: p.gems ?? 0 }));
   g.prefs = { anim: g.prefs?.anim !== false };
   return g;
 }
@@ -47,3 +49,6 @@ export function save(g: Game): string | null {
 
 export const exportJson = (g: Game) => JSON.stringify({ app: 'system-rpg', exportedAt: new Date().toISOString(), ...g }, null, 1);
 export function importJson(text: string): Game { return migrate(JSON.parse(text)); }
+
+/** Deletes the save and its fallback copy so a reset really starts from nothing. */
+export function wipe() { try { localStorage.removeItem(KEY); localStorage.removeItem(PREV); } catch { /* ignore */ } }
