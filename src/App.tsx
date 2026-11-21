@@ -68,14 +68,14 @@ export default function App() {
         {note && <div className="banner" onClick={dismissNote}>{note} (tap to dismiss)</div>}
         {saveError && <div className="banner bad">{saveError} Export a backup if you can.</div>}
         {!c ? <Create g={g} /> : (
-          <>
+          <div key={screen} className="tab">
             {screen === 'home' && <Home g={g} now={now} go={(s) => setScreen(s as typeof screen)} />}
             {screen === 'tasks' && <Tasks g={g} now={now} />}
             {screen === 'shop' && <Shop g={g} />}
             {screen === 'character' && <CharacterScreen g={g} />}
             {screen === 'talents' && <Talents g={g} />}
             {screen === 'battle' && <Battle g={g} />}
-          </>
+          </div>
         )}
       </main>
       <Toasts />
