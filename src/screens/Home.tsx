@@ -3,7 +3,7 @@ import { STATS, STAT_LABEL } from '../logic/types.ts';
 import { MAX_LEVEL, MAX_XP, XP_PER_LEVEL, levelOf, xpInLevel } from '../logic/leveling.ts';
 import { activeOn, dateKey, isDone, sortTasks } from '../logic/tasks.ts';
 import { bonus, effective, maxHealth } from '../logic/character.ts';
-import { HpBar, Panel, StatGrid, TalentChips, XpBar, fmt } from '../ui.tsx';
+import { HpBar, Panel, TalentChips, XpBar, fmt } from '../ui.tsx';
 import { TaskRow } from './TaskRow.tsx';
 
 function Boss({ g }: { g: Game }) {
@@ -54,13 +54,6 @@ export default function Home({ g, now, go }: { g: Game; now: Date; go: (s: strin
   );
   return (
     <>
-      <Panel title="Quests" right={<span className="tag">{doneCount}/{recurring.length} today</span>}>
-        {g.tasks.length === 0 && <p className="dim">No quests yet. <button className="link" onClick={() => go('tasks')}>Create your first quest</button></p>}
-        <Group label="Daily" list={daily} />
-        <Group label="Weekly" list={weekly} />
-        <Group label="One-time" list={once} />
-      </Panel>
-
       <Panel title="Player" right={<span className="tag">Gen {c.gen}</span>}>
         <div className="hero">
           <div className="lv"><small>LV</small><b>{lv}</b></div>
@@ -86,13 +79,12 @@ export default function Home({ g, now, go }: { g: Game; now: Date; go: (s: strin
         </div>
       </Panel>
 
-      <section className="panel">
-        <details open>
-          <summary><h2>Stats</h2><span className="tag">HP {maxHealth(c)}</span></summary>
-          <StatGrid c={c} />
-          <TalentChips c={c} />
-        </details>
-      </section>
+      <Panel title="Quests" right={<span className="tag">{doneCount}/{recurring.length} today</span>}>
+        {g.tasks.length === 0 && <p className="dim">No quests yet. <button className="link" onClick={() => go('tasks')}>Create your first quest</button></p>}
+        <Group label="Daily" list={daily} />
+        <Group label="Weekly" list={weekly} />
+        <Group label="One-time" list={once} />
+      </Panel>
 
       <Boss g={g} />
     </>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Game, ShopItem } from '../logic/types.ts';
 import { blankItem, canAfford, costText, deleteItem, purchase, saveItem, validateItem } from '../logic/shop.ts';
 import { act, toast } from '../store.ts';
@@ -36,13 +36,26 @@ function ItemForm({ initial, onClose }: { initial: ShopItem; onClose: () => void
 
 export default function Shop({ g }: { g: Game }) {
   const [edit, setEdit] = useState<ShopItem | null>(null);
+  const [bought, setBought] = useState<{ id: string; n: number; text: string } | null>(null);
+  const count = useRef(g.purchases.length);
+  useEffect(() => {
+    const last = g.purchases[g.purchases.length - 1];
+    if (g.purchases.length > count.current && last) {
+      setBought({ id: last.itemId, n: g.purchases.length, text: `-${costText(last)}` });
+      const t = setTimeout(() => setBought(null), 1100);
+      count.current = g.purchases.length;
+      return () => clearTimeout(t);
+    }
+    count.current = g.purchases.length;
+  }, [g.purchases.length]);
   return (
     <>
       <Panel title="Reward Shop" right={<button className="btn sm" onClick={() => setEdit(blankItem())}>+ New</button>}>
         <p className="row"><span>Your Gold / Gems</span><b><span className="gold">{g.gold}</span> / <span className="gem">{g.gems}</span></b></p>
         {g.shop.length === 0 && <p className="dim">The shop is empty. Add a reward.</p>}
         {g.shop.map((i) => (
-          <div className="task" key={i.id}>
+          <div className={'task shopitem' + (bought?.id === i.id ? ' bought' : '')} key={i.id}>
+            {bought?.id === i.id && <span key={bought.n} className="spent">{bought.text}</span>}
             <span className="ticon">{i.icon}</span>
             <div className="tbody"><b>{i.name}</b>{i.desc && <p className="dim">{i.desc}</p>}<p className="rw gold">{costText(i)}</p></div>
             <div className="tact">

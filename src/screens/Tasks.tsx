@@ -11,10 +11,11 @@ function TaskForm({ initial, onClose }: { initial: Task; onClose: () => void }) 
   const [t, setT] = useState<Task>(initial);
   const [xp, setXp] = useState(String(initial.xp));
   const [gems, setGems] = useState(String(initial.gems));
+  const [gold, setGold] = useState(String(initial.gold));
   const [err, setErr] = useState('');
   const up = (p: Partial<Task>) => setT({ ...t, ...p });
   const submit = () => {
-    const out: Task = { ...t, name: t.name.trim(), xp: xp.trim() === '' ? NaN : Number(xp), gems: gems.trim() === '' ? NaN : Number(gems), days: t.type === 'weekly' ? t.days : [], dueDate: t.type === 'daily' ? '' : t.dueDate };
+    const out: Task = { ...t, name: t.name.trim(), xp: xp.trim() === '' ? NaN : Number(xp), gems: gems.trim() === '' ? NaN : Number(gems), gold: gold.trim() === '' ? NaN : Number(gold), days: t.type === 'weekly' ? t.days : [], dueDate: t.type === 'daily' ? '' : t.dueDate };
     const e = validateTask(out);
     if (e) return setErr(e);
     act((g) => saveTask(g, out));
@@ -37,9 +38,10 @@ function TaskForm({ initial, onClose }: { initial: Task; onClose: () => void }) 
           ))}
         </div>
       )}
-      <div className="two">
+      <div className="three">
         <label>XP<input inputMode="numeric" value={xp} onChange={(e) => setXp(e.target.value)} /></label>
         <label>Gems<input inputMode="numeric" value={gems} onChange={(e) => setGems(e.target.value)} /></label>
+        <label>Gold<input inputMode="numeric" value={gold} onChange={(e) => setGold(e.target.value)} /></label>
       </div>
       <label>Priority
         <select value={t.priority} onChange={(e) => up({ priority: Number(e.target.value) as 1 | 2 | 3 })}>

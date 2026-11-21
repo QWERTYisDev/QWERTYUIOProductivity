@@ -22,7 +22,7 @@ export function TaskRow({ t, g, now, onEdit, onDelete }: { t: Task; g: Game; now
           {t.dueTime && ` · by ${t.dueTime}`}
           {late && ' · OVERDUE'}
         </p>
-        <p className="rw">+{t.xp} XP · +{t.gems} Gems</p>
+        <p className="rw">+{t.xp} XP · +{t.gems} Gems{t.gold > 0 && ` · +${t.gold} Gold`}</p>
       </div>
       <div className="tact">
         {done ? (
