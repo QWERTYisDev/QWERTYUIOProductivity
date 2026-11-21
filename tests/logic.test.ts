@@ -83,6 +83,14 @@ assert.equal(new Set(TALENTS.map((t) => t.id)).size, 45);
   assert.equal(completeTask(saveTask(g, wk), wk.id, new Date(2026, 10, 21)).g.completions, g.completions);
   assert.equal(dateKey(new Date(2026, 0, 5)), '2026-01-05');
 }
+// --- quest gold
+{
+  let g = hero(); const q = { ...blankTask('once'), name: 'G', xp: 0, gems: 1, gold: 40 };
+  assert.equal(validateTask({ ...q, gold: -1 }), 'Gold must be a whole number from 0 to 100000.');
+  g = completeTask(saveTask(g, q), q.id, new Date(2026, 10, 21)).g; assert.deepEqual([g.gold, g.gems], [40, 1]);
+  g = completeTask(g, q.id, new Date(2026, 10, 21)).g; assert.equal(g.gold, 40);
+  assert.equal(migrate({ ...g, tasks: [{ ...q, gold: undefined }] }).tasks[0].gold, 0);
+}
 // --- shop
 {
   let g = { ...hero(), gold: 150 };
