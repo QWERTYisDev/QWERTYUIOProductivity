@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>My App</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#111111">
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom); background: #111; color: #eee; }
+  button { font-size: 1.1rem; padding: .6rem 1rem; }
+</style>
+</head>
+<body>
+<h1>My App</h1>
+<p>Taps: <span id="n">0</span></p>
+<button id="b">Tap</button>
+<script>
+  // Placeholder app: a counter that survives restarts. Replace with your real app.
+  const n = document.getElementById('n');
+  n.textContent = localStorage.getItem('n') || 0;
+  document.getElementById('b').onclick = () => {
+    n.textContent = +n.textContent + 1;
+    localStorage.setItem('n', n.textContent);
+  };
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
