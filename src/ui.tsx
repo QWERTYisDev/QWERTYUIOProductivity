@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Character, Round, Stat, Talent } from './logic/types.ts';
 import { STATS, STAT_LABEL, STAT_SHORT } from './logic/types.ts';
 import { TALENT_BY_ID } from './logic/talents.ts';
@@ -63,9 +63,12 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
 }
 
 const seenStat: Record<string, number> = {};
+const calm = () => document.body.classList.contains('noanim') || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 function StatCard({ c, s, onSpend }: { c: Character; s: Stat; onSpend?: (s: Stat) => void }) {
   const v = effective(c, s);
   const key = c.id + ':' + s;
+  const card = useRef<HTMLDivElement>(null);
+  const num = useRef<HTMLSpanElement>(null);
   const [shown, setShown] = useState(v);
   const [pulse, setPulse] = useState(0);
   const [delta, setDelta] = useState(0);
@@ -75,6 +78,11 @@ function StatCard({ c, s, onSpend }: { c: Character; s: Stat; onSpend?: (s: Stat
     if (prev === undefined || v <= prev) { setShown(v); setDelta(0); return; } // only a real increase animates
     setPulse((n) => n + 1);
     setDelta(v - prev);
+    if (!calm()) {
+      // Web Animations: re-triggerable without remounting the card (so rapid +1 taps are never lost)
+      card.current?.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-2px)' }, { transform: 'translateX(2px)' }, { transform: 'translateX(-1px)' }, { transform: 'translateX(1px)' }, { transform: 'translateX(0)' }], { duration: 340, easing: 'ease-out' });
+      num.current?.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.25)' }, { transform: 'scale(1)' }], { duration: 440, easing: 'cubic-bezier(.2,1.5,.4,1)' });
+    }
     const t0 = performance.now();
     let raf = 0;
     const step = (t: number) => {
@@ -87,12 +95,13 @@ function StatCard({ c, s, onSpend }: { c: Character; s: Stat; onSpend?: (s: Stat
   }, [v, key]);
   const text = shown === v ? fmt(v) : Number.isInteger(v) ? String(Math.round(shown)) : shown.toFixed(1);
   return (
-    <div className="stat">
+    <div className="stat" ref={card}>
       {pulse > 0 && <i key={pulse} className="flash" />}
+      {pulse > 0 && <i key={'r' + pulse} className="ripple" />}
       <span className="sl">{STAT_LABEL[s]}</span>
-      <span className="sv">{text}</span>
+      <span className="sv" ref={num}>{text}</span>
       <span className="sb">base {c.base[s]}{bonus(c, s) !== 0 && <em> {bonus(c, s) > 0 ? '+' : ''}{fmt(bonus(c, s))} talents</em>}</span>
-      {delta > 0 && <span key={pulse} className="delta">+{fmt(delta)}</span>}
+      {delta > 0 && <span key={'d' + pulse} className="delta">+{fmt(delta)}</span>}
       {onSpend && <button className="plus" disabled={c.sp < 1} onClick={() => onSpend(s)} aria-label={`Spend a skill point on ${STAT_LABEL[s]}`}>+1</button>}
     </div>
   );
@@ -172,6 +181,7 @@ export function Overlays() {
     return (
       <div className="scrim over">
         <div className="reveal">
+          <small className="sysh">[ PLAYER REGISTERED ]</small>
           <p className="dim">The System has chosen you</p>
           <h1>{reveal.name}</h1>
           <ul>
@@ -186,8 +196,10 @@ export function Overlays() {
   if (levelup) {
     return (
       <div className="scrim over" onClick={dismissLevelup}>
+        <div className="rays" aria-hidden="true" />
+        <div className="burst" aria-hidden="true"><i /><i /><i /></div>
         <div className="reveal lvl">
-          <p className="dim">System notification</p>
+          <small className="sysh">[ NOTIFICATION ]</small>
           <h1>LEVEL UP</h1>
           <p className="big">Level {levelup.level}</p>
           <ul className="rew">
@@ -205,7 +217,8 @@ export function Overlays() {
 
 export function Toasts() {
   const { toasts } = useSnap();
-  return <div className="toasts" aria-live="polite">{toasts.map((t) => <div key={t.id} className={'toast ' + t.kind}>{t.text}</div>)}</div>;
+  const label = { good: 'NOTIFICATION', bad: 'WARNING', info: 'SYSTEM' };
+  return <div className="toasts" aria-live="polite">{toasts.map((t) => <div key={t.id} className={'toast ' + t.kind}><small>[ {label[t.kind]} ]</small><span>{t.text}</span></div>)}</div>;
 }
 
 const P: Record<string, string> = {
