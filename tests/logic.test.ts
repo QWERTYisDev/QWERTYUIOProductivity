@@ -9,6 +9,10 @@ import { purchase, validateItem } from '../src/logic/shop.ts';
 import { rerollHand } from '../src/logic/game.ts';
 import { BEATS, statWeights, pickOptions, startBattle, playRound, finishBattle, rollSide } from '../src/logic/battle.ts';
 import { migrate, exportJson, importJson } from '../src/logic/storage.ts';
+import { undoCompletion, toggleSub, streakOf, UNDO_MS } from '../src/logic/tasks.ts';
+import { leftOf, toggleFav } from '../src/logic/shop.ts';
+import { statsOf, totals } from '../src/logic/stats.ts';
+import { unlock, equipTitle, ACHIEVEMENTS } from '../src/logic/achievements.ts';
 
 const seq = (...v: number[]) => { let i = 0; return () => v[i++ % v.length]; };
 const hero = (g = freshGame()) => createHero(g, 'Tester').g;
@@ -155,5 +159,69 @@ assert.equal(new Set(TALENTS.map((t) => t.id)).size, 45);
   const back = importJson(exportJson(g)); assert.equal(back.character!.name, 'Tester'); assert.equal(back.boss.name, INITIAL_BOSS.name);
   assert.throws(() => migrate({ v: 99 })); assert.throws(() => migrate('x')); assert.throws(() => migrate({ boss: null }));
   assert.equal(migrate({ ...g, v: undefined }).v, 1);
+}
+// --- undo
+{
+  let g = hero(); const q = { ...blankTask('once'), name: 'U', xp: 1200, gems: 4, gold: 30 };
+  g = saveTask(g, q); const now = new Date(2026, 10, 21, 9);
+  g = completeTask(g, q.id, now).g;   // 1200 xp: level 2 (+100 gold, 3 sp, 1 hand)
+  const key = `${q.id}|once`; const rec = g.completions[key];
+  assert.deepEqual([rec.xpGot, rec.levels, rec.lvGold], [1200, 1, 100]);
+  assert.equal(undoCompletion(g, key, rec.at + UNDO_MS + 1).g, g); // too late
+  const spent = spendPoint(g.character!, 'str')!; // spending the level-up points blocks the undo
+  assert.equal(undoCompletion({ ...g, character: spent }, key, rec.at + 100).g.character, spent);
+  const u = undoCompletion(g, key, rec.at + 100).g;
+  assert.deepEqual([u.gold, u.gems, u.character!.totalXp, u.character!.sp, u.character!.hands, !!u.completions[key]], [0, 0, 0, 0, 0, false]);
+  const again = completeTask(u, q.id, now).g; assert.equal(again.gold, 130); // can be completed again
+  const bought = { ...g, gold: 0 }; assert.equal(undoCompletion(bought, key, rec.at + 5).g, bought); // gold already spent
+}
+// --- subtasks
+{
+  let g = hero(); const q = { ...blankTask('daily'), name: 'S', xp: 100, gems: 2, subs: [{ id: 'a', text: 'one' }, { id: 'b', text: 'two' }] };
+  g = saveTask(g, q); const now = new Date(2026, 10, 21, 9);
+  assert.equal(completeTask(g, q.id, now).g, g); // can't skip the checklist
+  g = toggleSub(g, q.id, 'a', now).g; assert.equal(g.gems, 0);
+  g = toggleSub(g, q.id, 'a', now).g; g = toggleSub(g, q.id, 'a', now).g; assert.equal(g.gems, 0);
+  const r = toggleSub(g, q.id, 'b', now); assert.deepEqual([r.g.gems, r.g.character!.totalXp], [2, 100]);
+  const back = undoCompletion(r.g, `${q.id}|${dateKey(now)}`, now.getTime() + 10); assert.equal(back.g.gems, 0); assert.deepEqual(back.g.subDone, {});
+  assert.ok(validateTask({ ...q, subs: [{ id: 'x', text: ' ' }] }));
+  // next day starts unchecked
+  assert.equal(toggleSub(r.g, q.id, 'a', new Date(2026, 10, 22, 9)).g.gems, 2);
+}
+// --- streaks
+{
+  let g = hero(); const q = { ...blankTask('daily'), name: 'D', xp: 1, gems: 0 }; g = saveTask(g, q);
+  for (const d of [18, 19, 20]) g = completeTask(g, q.id, new Date(2026, 10, d, 9)).g;
+  assert.equal(streakOf(g, q, new Date(2026, 10, 21, 8)), 3); // today still open: streak alive
+  g = completeTask(g, q.id, new Date(2026, 10, 21, 9)).g; assert.equal(streakOf(g, q, new Date(2026, 10, 21, 10)), 4);
+  assert.equal(streakOf(g, q, new Date(2026, 10, 24, 10)), 0); // broken
+  assert.equal(streakOf(g, { ...q, type: 'once' }, new Date(2026, 10, 21)), 0);
+}
+// --- shop extras
+{
+  let g = { ...hero(), gold: 1000 };
+  g.shop = [{ id: 'd', name: 'Daily', desc: '', price: 10, gems: 0, icon: 'x', cat: 'Fun', fav: false, limit: 'daily', n: 2 }, { id: 's', name: 'Stock', desc: '', price: 10, gems: 0, icon: 'x', cat: '', fav: false, limit: 'stock', n: 1 }];
+  const t0 = Date.now(); const dayStart = new Date(); dayStart.setHours(12, 0, 0, 0);
+  g = purchase(g, 'd', dayStart.getTime()).g; g = purchase(g, 'd', dayStart.getTime() + 2000).g;
+  assert.equal(g.purchases.length, 2); assert.equal(leftOf(g, g.shop[0], dayStart.getTime() + 3000), 0);
+  assert.equal(purchase(g, 'd', dayStart.getTime() + 5000).g, g); // limit reached
+  assert.equal(leftOf(g, g.shop[0], dayStart.getTime() + 864e5), 2); // next day resets
+  g = purchase(g, 's', t0).g; assert.equal(g.shop[1].n, 0); assert.equal(purchase(g, 's', t0 + 5000).g, g);
+  assert.equal(toggleFav(g, 'd').shop[0].fav, true);
+  assert.equal(migrate({ ...g, shop: [{ id: 'o', name: 'Old', desc: '', price: 5, icon: 'x' }] }).shop[0].limit, 'none');
+}
+// --- stats + achievements
+{
+  let g = { ...hero(), gold: 0 }; const now = new Date(2026, 10, 21, 12);
+  const q = { ...blankTask('once'), name: 'A', xp: 100, gems: 5, gold: 50 };
+  g = completeTask(saveTask(g, q), q.id, now).g;
+  g.shop = [{ id: 'p', name: 'P', desc: '', price: 20, gems: 2, icon: 'x', cat: '', fav: false, limit: 'none', n: 1 }];
+  g = purchase(g, 'p', 1e12).g;
+  assert.deepEqual(totals(g), { goldIn: 50, goldOut: 20, gemsIn: 5, gemsOut: 2 });
+  const st = statsOf(g, now); assert.equal(st.days.length, 14); assert.equal(st.days[13].xp, 100); assert.equal(st.weeks[7].n, 1); assert.equal(st.heat.length, 84);
+  assert.equal(st.heat.filter((h) => h.n > 0).length, 1); assert.equal(st.heat[0].date.length, 10);
+  const u = unlock(g, now); assert.ok(u.g.achievements.first_quest); assert.equal(unlock(u.g, now).g, u.g); // idempotent
+  assert.ok(ACHIEVEMENTS.length >= 12);
+  assert.equal(equipTitle(u.g, 'first_quest').title, 'first_quest'); assert.equal(equipTitle(u.g, 'streak_30').title, '');
 }
 console.log('all logic tests passed');
