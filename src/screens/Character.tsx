@@ -3,7 +3,7 @@ import type { Character as Char, Game } from '../logic/types.ts';
 import { MAX_LEVEL, XP_PER_LEVEL, levelOf, xpInLevel } from '../logic/leveling.ts';
 import { maxHealth } from '../logic/character.ts';
 import { spendStat } from '../logic/game.ts';
-import { act, backupText, importBackup, toast } from '../store.ts';
+import { act, backupText, eraseAll, importBackup, toast } from '../store.ts';
 import { Panel, RoundDetail, StatGrid, TalentChips } from '../ui.tsx';
 
 function Sheet({ g }: { g: Game }) {
@@ -103,6 +103,10 @@ function System({ g }: { g: Game }) {
         <input ref={file} type="file" accept=".json,application/json" onChange={async (e) => { const f = e.target.files?.[0]; if (f) doImport(await f.text()); e.target.value = ''; }} />
         <label>Or paste backup text<textarea rows={4} value={text} onChange={(e) => setText(e.target.value)} /></label>
         <button className="btn wide" disabled={!text.trim()} onClick={() => doImport(text)}>Import pasted backup</button>
+      </Panel>
+      <Panel title="Reset">
+        <p className="dim">Erases everything (character, boss, archive, quests, shop, Gold, Gems, history) and starts from the very beginning. Download a backup first if you might want it back.</p>
+        <button className="btn ghost wide danger" onClick={() => window.confirm('Reset ALL data and start from the very beginning? This cannot be undone.') && eraseAll()}>Reset all data</button>
       </Panel>
       <Panel title="Preferences">
         <label className="check"><input type="checkbox" checked={g.prefs.anim} onChange={(e) => act((x) => ({ ...x, prefs: { ...x.prefs, anim: e.target.checked } }))} /> Animations</label>
