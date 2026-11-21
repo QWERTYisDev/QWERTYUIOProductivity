@@ -53,8 +53,8 @@ export interface Task {
 }
 export interface Completion { taskId: string; name: string; xp: number; gems: number; at: number; charId: string; occ: string }
 
-export interface ShopItem { id: string; name: string; desc: string; price: number; icon: string }
-export interface Purchase { id: string; itemId: string; name: string; price: number; at: number }
+export interface ShopItem { id: string; name: string; desc: string; price: number; gems: number; icon: string } // price = Gold, gems = Gems (either or both)
+export interface Purchase { id: string; itemId: string; name: string; price: number; gems: number; at: number }
 
 export interface Round {
   n: number;
