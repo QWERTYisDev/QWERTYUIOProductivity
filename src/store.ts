@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { Character, Ev, Game, Out } from './logic/types.ts';
-import { exportJson, importJson, load, save } from './logic/storage.ts';
+import { exportJson, importJson, load, save, wipe } from './logic/storage.ts';
 import { freshGame } from './logic/game.ts';
 
 export interface Toast { id: number; text: string; kind: 'good' | 'bad' | 'info' }
@@ -58,5 +58,5 @@ export function importBackup(text: string) {
   replaceGame(importJson(text));
   toast('Backup imported.', 'good');
 }
-export function eraseAll() { replaceGame(freshGame()); }
+export function eraseAll() { wipe(); replaceGame(freshGame()); }
 export const backupText = () => exportJson(snap.game);
