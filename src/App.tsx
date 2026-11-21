@@ -46,6 +46,8 @@ export default function App() {
   }, []);
   useEffect(() => { document.body.classList.toggle('noanim', !g.prefs.anim); }, [g.prefs.anim]);
 
+  useEffect(() => { if (!g.character) setScreen('home'); }, [g.character]);
+
   if (fatal) return <Fatal {...fatal} />;
   const now = new Date();
   const c = g.character;
