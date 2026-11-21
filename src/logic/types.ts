@@ -44,6 +44,7 @@ export interface Task {
   type: TaskType;
   xp: number;
   gems: number;
+  gold: number; // bonus Gold paid on completion (separate from level-up Gold)
   priority: 1 | 2 | 3;
   dueDate: string; // YYYY-MM-DD or ''. Weekly: last day the quest appears.
   dueTime: string; // HH:MM or ''
@@ -51,7 +52,7 @@ export interface Task {
   icon: string;
   createdAt: number;
 }
-export interface Completion { taskId: string; name: string; xp: number; gems: number; at: number; charId: string; occ: string }
+export interface Completion { taskId: string; name: string; xp: number; gems: number; gold: number; at: number; charId: string; occ: string }
 
 export interface ShopItem { id: string; name: string; desc: string; price: number; gems: number; icon: string } // price = Gold, gems = Gems (either or both)
 export interface Purchase { id: string; itemId: string; name: string; price: number; gems: number; at: number }

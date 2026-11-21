@@ -25,7 +25,7 @@ export function isOverdue(t: Task, g: Game, now: Date = new Date()): boolean {
 export function validateTask(t: Partial<Task>): string | null {
   if (!t.name || !t.name.trim()) return 'Quest needs a name.';
   if (t.name.length > 60) return 'Name is too long (60 max).';
-  for (const [k, v] of [['XP', t.xp], ['Gems', t.gems]] as const) {
+  for (const [k, v] of [['XP', t.xp], ['Gems', t.gems], ['Gold', t.gold]] as const) {
     if (v === undefined || !Number.isInteger(v) || v < 0 || v > 100000) return `${k} must be a whole number from 0 to 100000.`;
   }
   if (t.type === 'weekly' && (!t.days || t.days.length === 0)) return 'Pick at least one weekday.';
@@ -39,7 +39,7 @@ export function saveTask(g: Game, t: Task): Game {
   return { ...g, tasks: exists ? g.tasks.map((x) => (x.id === t.id ? t : x)) : [...g.tasks, t] };
 }
 export const blankTask = (type: TaskType = 'daily'): Task => ({
-  id: uid(), name: '', desc: '', type, xp: 100, gems: 5, priority: 2, dueDate: '', dueTime: '', days: [1, 2, 3, 4, 5], icon: '⚔️', createdAt: Date.now(),
+  id: uid(), name: '', desc: '', type, xp: 100, gems: 5, gold: 0, priority: 2, dueDate: '', dueTime: '', days: [1, 2, 3, 4, 5], icon: '⚔️', createdAt: Date.now(),
 });
 export const deleteTask = (g: Game, id: string): Game => ({ ...g, tasks: g.tasks.filter((t) => t.id !== id) });
 
@@ -52,16 +52,16 @@ export function completeTask(g: Game, id: string, now: Date = new Date()): Out {
   if (g.completions[key]) return { g };
   const before = levelOf(c.totalXp);
   const r = addXp(c, t.xp);
-  const ev: Out['ev'] = [{ t: 'toast', kind: 'good', text: `Quest complete: +${t.xp} XP, +${t.gems} Gems` }];
+  const ev: Out['ev'] = [{ t: 'toast', kind: 'good', text: `Quest complete: +${t.xp} XP, +${t.gems} Gems${t.gold ? `, +${t.gold} Gold` : ''}` }];
   if (r.wasted > 0) ev.push({ t: 'toast', kind: 'info', text: 'Level cap reached: XP not added.' });
   if (r.levels > 0) ev.push({ t: 'levelup', level: before + r.levels, levels: r.levels });
   return {
     g: {
       ...g,
       character: r.c,
-      gold: g.gold + r.gold,
+      gold: g.gold + r.gold + t.gold,
       gems: g.gems + t.gems,
-      completions: { ...g.completions, [key]: { taskId: t.id, name: t.name, xp: t.xp, gems: t.gems, at: now.getTime(), charId: c.id, occ: occurrence(t, dateKey(now)) } },
+      completions: { ...g.completions, [key]: { taskId: t.id, name: t.name, xp: t.xp, gems: t.gems, gold: t.gold, at: now.getTime(), charId: c.id, occ: occurrence(t, dateKey(now)) } },
     },
     ev,
   };
