@@ -4,7 +4,7 @@ import { MAX_LEVEL, MAX_XP, XP_PER_LEVEL, levelOf, xpInLevel } from '../logic/le
 import { activeOn, dateKey, isDone, sortTasks } from '../logic/tasks.ts';
 import { bonus, effective, maxHealth } from '../logic/character.ts';
 import { HpBar, Panel, TalentChips, XpBar, fmt } from '../ui.tsx';
-import { TaskRow } from './TaskRow.tsx';
+import { TaskRow, useRecentlyDone } from './TaskRow.tsx';
 
 function Boss({ g }: { g: Game }) {
   const b = g.boss;
@@ -41,17 +41,22 @@ export default function Home({ g, now, go }: { g: Game; now: Date; go: (s: strin
   const c = g.character!;
   const lv = levelOf(c.totalXp);
   const today = dateKey(now);
+  const stay = useRecentlyDone(g);
   const todays = (type: 'daily' | 'weekly') => sortTasks(g.tasks.filter((t) => t.type === type && activeOn(t, now)), 'priority');
   const daily = todays('daily'), weekly = todays('weekly');
-  const once = sortTasks(g.tasks.filter((t) => t.type === 'once' && !isDone(g, t, today)), 'due');
+  const once = sortTasks(g.tasks.filter((t) => t.type === 'once'), 'due');
   const recurring = [...daily, ...weekly];
   const doneCount = recurring.filter((t) => isDone(g, t, today)).length;
-  const group = (label: string, list: Task[]) => (
+  // Completed quests leave the Home screen (after a brief moment so the completion effect is seen)
+  const group = (label: string, all: Task[]) => {
+    const list = all.filter((t) => !isDone(g, t, today) || stay.includes(t.id));
+    return (
     <div className="group" key={label}>
       <h4>{label}</h4>
-      {list.length ? list.map((t) => <TaskRow key={t.id} t={t} g={g} now={now} />) : <p className="dim">None right now.</p>}
+      {list.length ? list.map((t) => <TaskRow key={t.id} t={t} g={g} now={now} />) : <p className="dim">{all.length ? 'All cleared.' : 'None right now.'}</p>}
     </div>
-  );
+    );
+  };
   return (
     <>
       <Panel title="Player" right={<span className="tag">Gen {c.gen}</span>}>

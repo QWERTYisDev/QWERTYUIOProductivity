@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import type { Game, Task, TaskType } from '../logic/types.ts';
-import { DAYS, blankTask, dateKey, deleteTask, isDone, saveTask, sortTasks, validateTask, type SortKey } from '../logic/tasks.ts';
+import { DAYS, activeOn, blankTask, dateKey, deleteTask, isDone, saveTask, sortTasks, validateTask, type SortKey } from '../logic/tasks.ts';
 import { act, toast } from '../store.ts';
 import { Modal, Panel } from '../ui.tsx';
-import { TaskRow } from './TaskRow.tsx';
+import { TaskRow, useRecentlyDone } from './TaskRow.tsx';
 
 const ICONS = ['⚔️', '📚', '💪', '🏃', '🧘', '💧', '🧹', '💻', '📝', '🎯', '🍎', '🛌', '💰', '🎨', '📞', '🌱'];
 
@@ -65,10 +65,18 @@ export default function Tasks({ g, now }: { g: Game; now: Date }) {
   const [sort, setSort] = useState<SortKey>('priority');
   const [edit, setEdit] = useState<Task | null>(null);
   const today = dateKey(now);
+  const stay = useRecentlyDone(g);
+  // Finished one-time quests disappear (view them with Status: Done). Open quests come first, then not-today, then done.
+  const rank = (t: Task) => (isDone(g, t, today) ? 2 : activeOn(t, now) ? 0 : 1);
   const list = sortTasks(
-    g.tasks.filter((t) => (type === 'all' || t.type === type) && (status === 'all' || (status === 'done') === isDone(g, t, today))),
+    g.tasks.filter((t) => {
+      const done = isDone(g, t, today);
+      if (type !== 'all' && t.type !== type) return false;
+      if (status !== 'all') return (status === 'done') === done;
+      return !(t.type === 'once' && done && !stay.includes(t.id));
+    }),
     sort
-  );
+  ).sort((a, b) => rank(a) - rank(b));
   return (
     <>
       <Panel title="Quests" right={<button className="btn sm" onClick={() => setEdit(blankTask(type === 'all' ? 'daily' : type))}>+ New</button>}>

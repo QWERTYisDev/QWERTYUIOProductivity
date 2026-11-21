@@ -1,9 +1,37 @@
+import { useEffect, useState, type CSSProperties } from 'react';
 import type { Game } from '../logic/types.ts';
 import { TALENTS, TALENT_BY_ID } from '../logic/talents.ts';
 import { REROLL_GEMS, eligible, meetsReq, owned } from '../logic/talentLogic.ts';
 import { openTalentHand, pickTalent, rerollHand } from '../logic/game.ts';
 import { act } from '../store.ts';
 import { Panel, TalentCard, TalentChips } from '../ui.tsx';
+
+let dealt = ''; // last offer that played the deal animation, so revisiting the tab does not replay it
+
+function Hand({ offer, id }: { offer: string[]; id: string }) {
+  const [fresh] = useState(dealt !== id);
+  const [ready, setReady] = useState(!fresh);
+  useEffect(() => {
+    dealt = id;
+    if (fresh) { const timer = setTimeout(() => setReady(true), 1300 + offer.length * 550 + 700); return () => clearTimeout(timer); }
+  }, [id, fresh, offer.length]);
+  return (
+    <>
+      <p className="sysh">[ SELECT ONE ]</p>
+      <div className="hand">
+        {offer.map((tid, i) => (
+          <div key={tid} className={`deal r-${TALENT_BY_ID[tid].rarity}${fresh ? ' fresh' : ''}`} style={{ '--i': i } as CSSProperties}>
+            <div className="deal-inner">
+              <div className="dface back"><span /></div>
+              <div className="dface front"><TalentCard t={TALENT_BY_ID[tid]} onPick={ready ? () => act((x) => pickTalent(x, tid)) : undefined} /></div>
+            </div>
+            <i className="beam" />
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
 
 export default function Talents({ g }: { g: Game }) {
   const c = g.character!;
@@ -21,7 +49,7 @@ export default function Talents({ g }: { g: Game }) {
         {c.hands >= 1 && offer && offer.length > 0 && (
           <>
             <p className="dim">Choose one. Your offer is saved, so leaving this screen will not re-roll it.</p>
-            <div className="hand">{offer.map((id, i) => <TalentCard key={id} t={TALENT_BY_ID[id]} delay={i * 220} onPick={() => act((x) => pickTalent(x, id))} />)}</div>
+            <Hand key={offer.join() + ':' + g.gems} id={offer.join() + ':' + g.gems} offer={offer} />
             <button className="btn ghost wide" disabled={g.gems < REROLL_GEMS} onClick={() => act(rerollHand)}>Re-roll offer ({REROLL_GEMS} Gems, you have {g.gems})</button>
           </>
         )}
