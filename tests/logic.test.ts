@@ -5,7 +5,8 @@ import { TALENTS } from '../src/logic/talents.ts';
 import { eligible, openHand, chooseTalent } from '../src/logic/talentLogic.ts';
 import { freshGame, createHero } from '../src/logic/game.ts';
 import { blankTask, completeTask, saveTask, validateTask, activeOn, resetOnce, dateKey } from '../src/logic/tasks.ts';
-import { purchase } from '../src/logic/shop.ts';
+import { purchase, validateItem } from '../src/logic/shop.ts';
+import { rerollHand } from '../src/logic/game.ts';
 import { BEATS, statWeights, pickOptions, startBattle, playRound, finishBattle, rollSide } from '../src/logic/battle.ts';
 import { migrate, exportJson, importJson } from '../src/logic/storage.ts';
 
@@ -88,6 +89,20 @@ assert.equal(new Set(TALENTS.map((t) => t.id)).size, 45);
   g = purchase(g, 'starter-game', 1000).g; assert.deepEqual([g.gold, g.purchases.length], [50, 1]);
   g = purchase(g, 'starter-game', 1100).g; assert.equal(g.purchases.length, 1); // double tap
   const bad = purchase(g, 'starter-ep', 5000); assert.equal(bad.g.gold, 50); assert.equal(bad.g.purchases.length, 1);
+}
+// --- gem / mixed shop + reroll
+{
+  let g = { ...hero(), gold: 100, gems: 5 };
+  g.shop = [...g.shop, { id: 'm', name: 'Mixed', desc: '', price: 50, gems: 5, icon: 'x' }, { id: 'gm', name: 'Gems', desc: '', price: 0, gems: 8, icon: 'x' }];
+  assert.equal(purchase(g, 'gm', 10).g.gems, 5); // can't afford 8 gems
+  g = purchase(g, 'm', 20000).g; assert.deepEqual([g.gold, g.gems], [50, 0]);
+  assert.equal(purchase(g, 'm', 30000).g, g);
+  assert.ok(validateItem({ name: 'a', price: 0, gems: 0 })); assert.equal(validateItem({ name: 'a', price: 0, gems: 3 }), null);
+  let r = { ...hero(), gems: 10 }; r.character = { ...r.character!, hands: 1, base: { str: 15, agi: 15, fort: 15, mana: 15 } };
+  assert.equal(rerollHand(r).g, r); // no open offer: no charge
+  r.character = openHand(r.character);
+  const out = rerollHand(r).g; assert.equal(out.gems, 0); assert.equal(out.character!.offer!.length, 3); assert.equal(out.character!.hands, 1);
+  assert.equal(rerollHand(out).g, out); // not enough gems
 }
 // --- battle
 {
