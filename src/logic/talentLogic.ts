@@ -13,6 +13,13 @@ export function openHand(c: Character, rnd: Rnd = Math.random): Character {
   return { ...c, offer: shuffle(eligible(c), rnd).slice(0, 3).map((t) => t.id) };
 }
 
+export const REROLL_GEMS = 10;
+/** Pays 10 Gems for a fresh offer on the open hand. Returns null if not possible. */
+export function rerollOffer(c: Character, gems: number, rnd: Rnd = Math.random): Character | null {
+  if (c.hands < 1 || !c.offer || c.offer.length === 0 || gems < REROLL_GEMS) return null;
+  return { ...c, offer: shuffle(eligible(c), rnd).slice(0, 3).map((t) => t.id) };
+}
+
 /** Picks a talent from the open offer (or id=null to resolve an empty hand). Consumes the hand. */
 export function chooseTalent(c: Character, id: string | null): Character | null {
   if (c.hands < 1 || !c.offer) return null;
