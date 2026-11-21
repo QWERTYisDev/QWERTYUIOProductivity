@@ -66,18 +66,33 @@ const seenStat: Record<string, number> = {};
 function StatCard({ c, s, onSpend }: { c: Character; s: Stat; onSpend?: (s: Stat) => void }) {
   const v = effective(c, s);
   const key = c.id + ':' + s;
+  const [shown, setShown] = useState(v);
   const [pulse, setPulse] = useState(0);
+  const [delta, setDelta] = useState(0);
   useEffect(() => {
     const prev = seenStat[key];
     seenStat[key] = v;
-    if (prev !== undefined && v > prev) setPulse((n) => n + 1); // only a real increase
+    if (prev === undefined || v <= prev) { setShown(v); setDelta(0); return; } // only a real increase animates
+    setPulse((n) => n + 1);
+    setDelta(v - prev);
+    const t0 = performance.now();
+    let raf = 0;
+    const step = (t: number) => {
+      const p = Math.min(1, (t - t0) / 600);
+      setShown(prev + (v - prev) * (1 - Math.pow(1 - p, 3)));
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
   }, [v, key]);
+  const text = shown === v ? fmt(v) : Number.isInteger(v) ? String(Math.round(shown)) : shown.toFixed(1);
   return (
     <div className="stat">
       {pulse > 0 && <i key={pulse} className="flash" />}
       <span className="sl">{STAT_LABEL[s]}</span>
-      <span key={pulse} className={'sv' + (pulse > 0 ? ' bump' : '')}>{fmt(v)}</span>
+      <span className="sv">{text}</span>
       <span className="sb">base {c.base[s]}{bonus(c, s) !== 0 && <em> {bonus(c, s) > 0 ? '+' : ''}{fmt(bonus(c, s))} talents</em>}</span>
+      {delta > 0 && <span key={pulse} className="delta">+{fmt(delta)}</span>}
       {onSpend && <button className="plus" disabled={c.sp < 1} onClick={() => onSpend(s)} aria-label={`Spend a skill point on ${STAT_LABEL[s]}`}>+1</button>}
     </div>
   );
