@@ -12,13 +12,14 @@ interface Snap {
   toasts: Toast[];
   levelup: { level: number; levels: number } | null;
   reveal: Character | null;
+  talentGot: string | null;
 }
 
 const loaded = load();
 let snap: Snap = {
   game: loaded.game ?? freshGame(),
   fatal: loaded.error ? { error: loaded.error, raw: loaded.raw } : null,
-  saveError: null, note: loaded.note ?? null, toasts: [], levelup: null, reveal: null,
+  saveError: null, note: loaded.note ?? null, toasts: [], levelup: null, reveal: null, talentGot: null,
 };
 const subs = new Set<() => void>();
 const set = (p: Partial<Snap>) => { snap = { ...snap, ...p }; subs.forEach((f) => f()); };
@@ -35,6 +36,7 @@ const applyEvents = (ev: Ev[]) => {
     if (e.t === 'toast') toast(e.text, e.kind ?? 'info');
     else if (e.t === 'levelup') set({ levelup: { level: e.level, levels: e.levels } });
     else if (e.t === 'reveal') set({ reveal: e.char });
+    else if (e.t === 'talent') set({ talentGot: e.id });
   }
 };
 
@@ -48,6 +50,7 @@ export function act(fn: (g: Game) => Game | Out) {
 }
 export const dismissLevelup = () => set({ levelup: null });
 export const dismissReveal = () => set({ reveal: null });
+export const dismissTalent = () => set({ talentGot: null });
 export const dismissNote = () => set({ note: null });
 
 function replaceGame(g: Game) {

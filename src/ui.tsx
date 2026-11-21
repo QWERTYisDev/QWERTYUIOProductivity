@@ -4,7 +4,7 @@ import { STATS, STAT_LABEL, STAT_SHORT } from './logic/types.ts';
 import { TALENT_BY_ID } from './logic/talents.ts';
 import { bonus, effective, maxHealth } from './logic/character.ts';
 import { MAX_LEVEL, MAX_XP, XP_PER_LEVEL, levelOf, xpInLevel } from './logic/leveling.ts';
-import { dismissLevelup, dismissReveal, useSnap } from './store.ts';
+import { dismissLevelup, dismissReveal, dismissTalent, useSnap } from './store.ts';
 
 export const fmt = (n: number) => String(+n.toFixed(2));
 
@@ -51,9 +51,26 @@ export function HpBar({ value, max }: { value: number; max: number }) {
   return <div className="hpbar"><i className="trail" style={{ width: w }} /><i className="fill" style={{ width: w }} /></div>;
 }
 
-export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+/** Sub-window state with an exit animation: close() plays the fold-away, then unmounts. */
+export function useSheet<T>() {
+  const [v, setV] = useState<T | null>(null);
+  const [closing, setClosing] = useState(false);
+  const busy = useRef(false);
+  return {
+    v, closing,
+    open: (x: T) => { busy.current = false; setClosing(false); setV(x); },
+    close: () => {
+      if (busy.current) return;
+      busy.current = true;
+      setClosing(true);
+      setTimeout(() => { setV(null); setClosing(false); busy.current = false; }, document.body.classList.contains('noanim') ? 0 : 450);
+    },
+  };
+}
+
+export function Modal({ title, onClose, closing, children }: { title: string; onClose: () => void; closing?: boolean; children: ReactNode }) {
   return (
-    <div className="scrim" onClick={onClose}>
+    <div className={'scrim' + (closing ? ' closing' : '')} onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={title}>
         <header><h2>{title}</h2><button className="x" onClick={onClose} aria-label="Close">✕</button></header>
         {children}
@@ -119,12 +136,18 @@ export const TalentChips = ({ c }: { c: Character }) => {
 
 export function TalentCard({ t, delay = 0, onPick, note }: { t: Talent; delay?: number; onPick?: () => void; note?: string }) {
   return (
-    <div className={'tcard r-' + t.rarity} style={{ animationDelay: `${delay}ms` }}>
+    <div
+      className={'tcard r-' + t.rarity + (onPick ? ' pick' : '')}
+      style={{ animationDelay: `${delay}ms` }}
+      onClick={onPick}
+      role={onPick ? 'button' : undefined}
+      tabIndex={onPick ? 0 : undefined}
+      onKeyDown={onPick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(); } } : undefined}
+    >
       <span className="rar">{t.rarity}</span>
       <h3>{t.name}</h3>
       <p>{t.desc}</p>
       {note && <p className="dim">{note}</p>}
-      {onPick && <button className="btn" onClick={onPick}>Choose</button>}
     </div>
   );
 }
@@ -176,10 +199,18 @@ function Roll({ to, delay, anim }: { to: number; delay: number; anim: boolean })
 }
 
 export function Overlays() {
-  const { reveal, levelup, game } = useSnap();
+  const { reveal, levelup, talentGot, game } = useSnap();
+  const [out, setOut] = useState(false);
+  // dismiss with a fold-away first
+  const leave = (fn: () => void) => () => {
+    if (out) return;
+    setOut(true);
+    setTimeout(() => { fn(); setOut(false); }, document.body.classList.contains('noanim') ? 0 : 450);
+  };
+  const cls = 'scrim over' + (out ? ' closing' : '');
   if (reveal) {
     return (
-      <div className="scrim over">
+      <div className={cls}>
         <div className="reveal">
           <small className="sysh">[ PLAYER REGISTERED ]</small>
           <p className="dim">The System has chosen you</p>
@@ -188,14 +219,14 @@ export function Overlays() {
             {STATS.map((s, i) => <li key={s}><span>{STAT_LABEL[s]}</span><Roll to={reveal.base[s]} delay={i * 450} anim={game.prefs.anim} /></li>)}
           </ul>
           <p className="dim">Health 10 · Level 1</p>
-          <button className="btn" onClick={dismissReveal}>Begin</button>
+          <button className="btn" onClick={leave(dismissReveal)}>Begin</button>
         </div>
       </div>
     );
   }
   if (levelup) {
     return (
-      <div className="scrim over" onClick={dismissLevelup}>
+      <div className={cls} onClick={leave(dismissLevelup)}>
         <div className="rays" aria-hidden="true" />
         <div className="burst" aria-hidden="true"><i /><i /><i /></div>
         <div className="reveal lvl">
@@ -207,7 +238,23 @@ export function Overlays() {
             <li>+{levelup.levels * 3} Skill Points</li>
             <li>+{levelup.levels} Talent Hand{levelup.levels > 1 ? 's' : ''}</li>
           </ul>
-          <button className="btn" onClick={dismissLevelup}>Continue</button>
+          <button className="btn" onClick={leave(dismissLevelup)}>Continue</button>
+        </div>
+      </div>
+    );
+  }
+  const tg = talentGot ? TALENT_BY_ID[talentGot] : null;
+  if (tg) {
+    return (
+      <div className={cls} onClick={leave(dismissTalent)}>
+        <div className="rays" aria-hidden="true" />
+        <div className="burst" aria-hidden="true"><i /><i /><i /></div>
+        <div className={'reveal tget r-' + tg.rarity}>
+          <small className="sysh">[ TALENT ACQUIRED ]</small>
+          <h1>{tg.name}</h1>
+          <p className="rar">{tg.rarity}</p>
+          <p>{tg.desc}</p>
+          <button className="btn" onClick={leave(dismissTalent)}>Continue</button>
         </div>
       </div>
     );

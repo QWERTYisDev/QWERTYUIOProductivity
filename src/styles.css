@@ -192,7 +192,6 @@ details > summary::-webkit-details-marker { display: none; }
 
 /* shop purchase */
 .shopitem { position: relative; }
-.panel .shopitem.bought { animation: buy .9s ease-out; }
 .spent { position: absolute; right: 4px; top: 2px; font-size: 13px; font-weight: 700; color: var(--gold); text-shadow: 0 0 8px #ffcc4d99; pointer-events: none; animation: spent 1.1s ease-out forwards; }
 @keyframes buy { 0% { background: #35e0a135; box-shadow: inset 0 0 0 1px var(--green); } 100% { background: transparent; box-shadow: inset 0 0 0 1px transparent; } }
 @keyframes spent { 0% { opacity: 0; transform: translateY(6px); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-16px); } }
@@ -297,3 +296,58 @@ body::before { content: ''; position: fixed; z-index: -1; left: 0; right: 0; top
 @keyframes dealflip { from { transform: rotateY(180deg); } to { transform: rotateY(0); } }
 @keyframes beam { 0% { opacity: 0; transform: scaleY(.2); } 30% { opacity: .85; transform: scaleY(1); } 100% { opacity: 0; transform: scaleY(1.2); } }
 @keyframes glyph { 0%, 100% { opacity: .55; transform: rotate(45deg) scale(.92); } 50% { opacity: 1; transform: rotate(135deg) scale(1.05); } }
+
+/* ===== shop purchase: overlay only; the row never animates, so repeat buys stay clean ===== */
+.buyfx { position: absolute; inset: 0; pointer-events: none; border: 1px solid var(--cyan); box-shadow: inset 0 0 18px #29d3ffaa; animation: buyframe 1s ease-out forwards; }
+.bsweep { position: absolute; top: 0; bottom: 0; left: 0; width: 40%; background: linear-gradient(100deg, transparent, #29d3ff77, transparent); animation: sweep .85s ease-out forwards; }
+.spent { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; right: 8px; top: 5px; }
+.spent small { font-size: 9px; letter-spacing: .22em; color: var(--cyan); text-shadow: 0 0 8px var(--cyan); }
+@keyframes buyframe { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ===== talent hand: three equal-height cards sharing the full width ===== */
+.hand { display: flex; flex-direction: row; align-items: stretch; gap: 6px; width: 100%; }
+.deal { display: flex; flex: 1 1 0; min-width: 0; }
+.deal-inner { flex: 1; min-width: 0; display: flex; }
+.dface.front { flex: 1; min-width: 0; display: flex; }
+.deal .tcard { flex: 1; min-width: 0; padding: 10px 8px; gap: 5px; overflow-wrap: anywhere; }
+.hand .tcard h3 { font-size: 14px; }
+.hand .tcard p { font-size: 11px; line-height: 1.35; }
+.hand .tcard .rar { font-size: 9px; letter-spacing: .1em; }
+.tcard.pick { cursor: pointer; transition: box-shadow .2s, filter .2s; }
+.tcard.pick:hover, .tcard.pick:focus-visible { box-shadow: 0 0 22px var(--rc), inset 0 0 14px color-mix(in srgb, var(--rc) 30%, transparent); }
+.tcard.pick:active { filter: brightness(1.4); }
+/* choosing: the picked card flares, the rest dissolve */
+.hand.picked .deal:not(.chosen) { animation: dissolve .7s ease-in forwards; pointer-events: none; }
+.deal.chosen { animation: chosen .95s cubic-bezier(.3, .8, .3, 1) forwards; z-index: 2; }
+.deal.chosen .tcard { box-shadow: 0 0 34px var(--rc), inset 0 0 22px color-mix(in srgb, var(--rc) 45%, transparent); }
+.deal.chosen .beam { animation: beam .95s ease-out both; }
+@keyframes dissolve { to { opacity: 0; filter: blur(5px) brightness(2); transform: scale(.9); } }
+@keyframes chosen { 0% { transform: scale(1); filter: none; } 45% { transform: scale(1.07); filter: brightness(1.6); } 100% { transform: scale(1.04); filter: brightness(1.15); } }
+
+/* talent acquired window */
+.reveal.tget { border-color: var(--rc); box-shadow: 0 0 50px color-mix(in srgb, var(--rc) 45%, transparent), inset 0 0 30px color-mix(in srgb, var(--rc) 18%, transparent); }
+.reveal.tget h1 { color: var(--rc); text-shadow: 0 0 20px var(--rc); font-size: 28px; animation: slam .55s cubic-bezier(.2, .9, .3, 1) .7s both; }
+.reveal.tget .rar { text-transform: uppercase; letter-spacing: .25em; font-size: 12px; color: var(--rc); }
+
+/* ===== closing: content fades, the window folds to a bright line, the line collapses ===== */
+@keyframes fold {
+  0%   { clip-path: inset(-20px); filter: none; opacity: 1; }
+  35%  { clip-path: inset(-20px); filter: brightness(1.4); opacity: 1; }
+  72%  { clip-path: inset(49.5% -20px 49.5% -20px); filter: brightness(2.6); opacity: 1; }
+  100% { clip-path: inset(49.5% 50% 49.5% 50%); filter: brightness(3.2); opacity: 0; }
+}
+@keyframes winout { 0% { opacity: 1; } 40%, 100% { opacity: 0; } }
+@keyframes scrimout { 0%, 50% { opacity: 1; } 100% { opacity: 0; } }
+.scrim.closing { animation: scrimout .45s ease-in both; pointer-events: none; }
+.scrim.closing .modal, .scrim.closing .reveal { animation: fold .45s cubic-bezier(.5, 0, .8, .4) both; }
+.scrim.closing .modal > *, .scrim.closing .reveal > * { animation: winout .45s linear both; }
+.scrim.closing .rays, .scrim.closing .burst { opacity: 0; transition: opacity .3s; }
+
+/* ===== long lists scroll inside their own box so the page stays put ===== */
+.scrollbox { max-height: 55vh; max-height: 55dvh; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  border-top: 1px solid #0f2540; border-bottom: 1px solid #0f2540; padding: 0 6px 0 0; scrollbar-width: thin; scrollbar-color: var(--cyan) transparent; }
+.scrollbox.cards { display: flex; flex-direction: column; gap: 8px; padding: 8px 6px 8px 0; }
+.scrollbox > .task:first-child { border-top: 0; }
+.scrollbox::-webkit-scrollbar { width: 4px; }
+.scrollbox::-webkit-scrollbar-thumb { background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
+.scrollbox::-webkit-scrollbar-track { background: #0a1628; }
