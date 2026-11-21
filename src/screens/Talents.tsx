@@ -1,7 +1,7 @@
 import type { Game } from '../logic/types.ts';
 import { TALENTS, TALENT_BY_ID } from '../logic/talents.ts';
-import { eligible, meetsReq, owned } from '../logic/talentLogic.ts';
-import { openTalentHand, pickTalent } from '../logic/game.ts';
+import { REROLL_GEMS, eligible, meetsReq, owned } from '../logic/talentLogic.ts';
+import { openTalentHand, pickTalent, rerollHand } from '../logic/game.ts';
 import { act } from '../store.ts';
 import { Panel, TalentCard, TalentChips } from '../ui.tsx';
 
@@ -22,6 +22,7 @@ export default function Talents({ g }: { g: Game }) {
           <>
             <p className="dim">Choose one. Your offer is saved, so leaving this screen will not re-roll it.</p>
             <div className="hand">{offer.map((id, i) => <TalentCard key={id} t={TALENT_BY_ID[id]} delay={i * 220} onPick={() => act((x) => pickTalent(x, id))} />)}</div>
+            <button className="btn ghost wide" disabled={g.gems < REROLL_GEMS} onClick={() => act(rerollHand)}>Re-roll offer ({REROLL_GEMS} Gems, you have {g.gems})</button>
           </>
         )}
         {c.hands >= 1 && offer && offer.length === 0 && (
