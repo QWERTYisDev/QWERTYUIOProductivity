@@ -36,6 +36,7 @@ export interface Character {
   fate?: 'boss' | 'defeated' | 'fallen';
 }
 
+export interface Sub { id: string; text: string }
 export type TaskType = 'daily' | 'weekly' | 'once';
 export interface Task {
   id: string;
@@ -49,12 +50,18 @@ export interface Task {
   dueDate: string; // YYYY-MM-DD or ''. Weekly: last day the quest appears.
   dueTime: string; // HH:MM or ''
   days: number[]; // weekly: 0=Sun..6=Sat
+  subs: Sub[]; // checklist: the quest pays out when every item is checked
   icon: string;
   createdAt: number;
 }
-export interface Completion { taskId: string; name: string; xp: number; gems: number; gold: number; at: number; charId: string; occ: string }
+export interface Completion { taskId: string; name: string; xp: number; gems: number; gold: number; at: number; charId: string; occ: string; xpGot?: number; levels?: number; lvGold?: number }
 
-export interface ShopItem { id: string; name: string; desc: string; price: number; gems: number; icon: string } // price = Gold, gems = Gems (either or both)
+export interface ShopItem {
+  id: string; name: string; desc: string; price: number; gems: number; icon: string;
+  cat: string; fav: boolean;
+  limit: 'none' | 'daily' | 'stock'; // daily: n buys per day; stock: n left in stock (decreases)
+  n: number;
+} // price = Gold, gems = Gems (either or both)
 export interface Purchase { id: string; itemId: string; name: string; price: number; gems: number; at: number }
 
 export interface Round {
@@ -100,12 +107,20 @@ export interface Game {
   purchases: Purchase[];
   battle: Battle | null;
   battles: BattleRecord[];
-  prefs: { anim: boolean };
+  prefs: { anim: boolean; sound: boolean };
+  subDone: Record<string, true>; // `${taskId}|${occurrence}|${subId}`
+  achievements: Record<string, number>; // id -> unlocked at
+  title: string; // equipped achievement id
+  rerolls: number;
+  lastBackup: number;
+  startedAt: number;
+  backupSnooze: number;
 }
 
 export type Ev =
   | { t: 'toast'; text: string; kind?: 'good' | 'bad' | 'info' }
   | { t: 'levelup'; level: number; levels: number }
   | { t: 'reveal'; char: Character }
-  | { t: 'talent'; id: string };
+  | { t: 'talent'; id: string }
+  | { t: 'sfx'; k: 'clear' | 'buy' };
 export type Out = { g: Game; ev?: Ev[] };

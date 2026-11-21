@@ -7,7 +7,8 @@ export const SAVE_VERSION = 1;
 
 export const freshGame = (): Game => ({
   v: 1, gen: 1, character: null, boss: INITIAL_BOSS, archive: [], gold: 0, gems: 0,
-  tasks: [], completions: {}, shop: STARTER_ITEMS, purchases: [], battle: null, battles: [], prefs: { anim: true },
+  tasks: [], completions: {}, shop: STARTER_ITEMS, purchases: [], battle: null, battles: [], prefs: { anim: true, sound: true },
+  subDone: {}, achievements: {}, title: '', rerolls: 0, lastBackup: 0, startedAt: Date.now(), backupSnooze: 0,
 });
 
 /** Creates the next character (only when none is active). The boss is never touched. */
@@ -37,5 +38,5 @@ export function rerollHand(g: Game): Out {
   if (!g.character) return { g };
   const c = rerollOffer(g.character, g.gems);
   if (!c) return { g, ev: [{ t: 'toast', kind: 'bad', text: `Re-roll needs ${REROLL_GEMS} Gems and an open hand.` }] };
-  return { g: { ...g, character: c, gems: g.gems - REROLL_GEMS } };
+  return { g: { ...g, character: c, gems: g.gems - REROLL_GEMS, rerolls: g.rerolls + 1 } };
 }

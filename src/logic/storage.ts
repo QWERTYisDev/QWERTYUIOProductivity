@@ -18,11 +18,18 @@ export function migrate(obj: any): Game {
   }
   if (typeof g.gold !== 'number' || typeof g.gems !== 'number' || typeof g.gen !== 'number') throw new Error('Save has invalid numbers.');
   g.completions = g.completions && typeof g.completions === 'object' ? g.completions : {};
-  g.tasks = g.tasks.map((t) => ({ ...t, gold: t.gold ?? 0 }));
+  g.tasks = g.tasks.map((t) => ({ ...t, gold: t.gold ?? 0, subs: Array.isArray(t.subs) ? t.subs : [] }));
   g.completions = Object.fromEntries(Object.entries(g.completions).map(([k, c]) => [k, { ...c, gold: c.gold ?? 0 }]));
-  g.shop = g.shop.map((i) => ({ ...i, gems: i.gems ?? 0 }));
+  g.shop = g.shop.map((i) => ({ ...i, gems: i.gems ?? 0, cat: i.cat ?? '', fav: !!i.fav, limit: i.limit === 'daily' || i.limit === 'stock' ? i.limit : 'none', n: Number.isInteger(i.n) ? i.n : 1 }));
   g.purchases = g.purchases.map((p) => ({ ...p, gems: p.gems ?? 0 }));
-  g.prefs = { anim: g.prefs?.anim !== false };
+  g.prefs = { anim: g.prefs?.anim !== false, sound: g.prefs?.sound !== false };
+  g.subDone = g.subDone && typeof g.subDone === 'object' ? g.subDone : {};
+  g.achievements = g.achievements && typeof g.achievements === 'object' ? g.achievements : {};
+  g.title = typeof g.title === 'string' ? g.title : '';
+  g.rerolls = Number.isInteger(g.rerolls) ? g.rerolls : 0;
+  g.lastBackup = Number(g.lastBackup) || 0;
+  g.startedAt = Number(g.startedAt) || Date.now();
+  g.backupSnooze = Number(g.backupSnooze) || 0;
   return g;
 }
 
