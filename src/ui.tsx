@@ -3,7 +3,7 @@ import type { Character, Round, Stat, Talent } from './logic/types.ts';
 import { STATS, STAT_LABEL, STAT_SHORT } from './logic/types.ts';
 import { TALENT_BY_ID } from './logic/talents.ts';
 import { bonus, effective, maxHealth } from './logic/character.ts';
-import { levelOf } from './logic/leveling.ts';
+import { MAX_LEVEL, MAX_XP, XP_PER_LEVEL, levelOf, xpInLevel } from './logic/leveling.ts';
 import { dismissLevelup, dismissReveal, useSnap } from './store.ts';
 
 export const fmt = (n: number) => String(+n.toFixed(2));
@@ -20,6 +20,37 @@ export const Bar = ({ value, max, cls = '' }: { value: number; max: number; cls?
   <div className={'bar ' + cls}><i style={{ width: `${Math.max(0, Math.min(100, (value / max) * 100))}%` }} /></div>
 );
 
+/** Last XP value shown per bar, so gains made on another tab still animate when you return. */
+const seenXp: Record<string, number> = {};
+const xpPct = (t: number, overall: boolean) => (overall ? (t / MAX_XP) * 100 : levelOf(t) >= MAX_LEVEL ? 100 : (xpInLevel(t) / XP_PER_LEVEL) * 100);
+
+/** XP bar: fills smoothly; on a level-up it fills to 100%, then resets to 0 and fills to the carried-over XP. */
+export function XpBar({ id, total, overall = false }: { id: string; total: number; overall?: boolean }) {
+  const key = id + (overall ? ':all' : ':lv');
+  const [w, setW] = useState(xpPct(seenXp[key] ?? total, overall));
+  const [snap, setSnap] = useState(false);
+  useEffect(() => {
+    const from = seenXp[key] ?? total;
+    seenXp[key] = total;
+    const timers: number[] = [];
+    if (!overall && levelOf(total) > levelOf(from)) {
+      setW(100);
+      timers.push(window.setTimeout(() => {
+        setSnap(true); setW(0);
+        timers.push(window.setTimeout(() => { setSnap(false); setW(xpPct(total, overall)); }, 60));
+      }, 650));
+    } else setW(xpPct(total, overall));
+    return () => timers.forEach(clearTimeout);
+  }, [total, key, overall]);
+  return <div className={'bar xp' + (overall ? ' alt' : '') + (snap ? ' snap' : '')}><i style={{ width: `${w}%` }} /></div>;
+}
+
+/** Health bar with a lagging trail so damage and healing read as a transition. */
+export function HpBar({ value, max }: { value: number; max: number }) {
+  const w = `${Math.max(0, Math.min(100, (value / max) * 100))}%`;
+  return <div className="hpbar"><i className="trail" style={{ width: w }} /><i className="fill" style={{ width: w }} /></div>;
+}
+
 export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   return (
     <div className="scrim" onClick={onClose}>
@@ -31,19 +62,28 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
   );
 }
 
-export function StatGrid({ c, onSpend }: { c: Character; onSpend?: (s: Stat) => void }) {
+const seenStat: Record<string, number> = {};
+function StatCard({ c, s, onSpend }: { c: Character; s: Stat; onSpend?: (s: Stat) => void }) {
+  const v = effective(c, s);
+  const key = c.id + ':' + s;
+  const [pulse, setPulse] = useState(0);
+  useEffect(() => {
+    const prev = seenStat[key];
+    seenStat[key] = v;
+    if (prev !== undefined && v > prev) setPulse((n) => n + 1); // only a real increase
+  }, [v, key]);
   return (
-    <div className="stats">
-      {STATS.map((s) => (
-        <div className="stat" key={s}>
-          <span className="sl">{STAT_LABEL[s]}</span>
-          <span className="sv">{fmt(effective(c, s))}</span>
-          <span className="sb">base {c.base[s]}{bonus(c, s) !== 0 && <em> {bonus(c, s) > 0 ? '+' : ''}{fmt(bonus(c, s))} talents</em>}</span>
-          {onSpend && <button className="plus" disabled={c.sp < 1} onClick={() => onSpend(s)} aria-label={`Spend a skill point on ${STAT_LABEL[s]}`}>+1</button>}
-        </div>
-      ))}
+    <div className="stat">
+      {pulse > 0 && <i key={pulse} className="flash" />}
+      <span className="sl">{STAT_LABEL[s]}</span>
+      <span key={pulse} className={'sv' + (pulse > 0 ? ' bump' : '')}>{fmt(v)}</span>
+      <span className="sb">base {c.base[s]}{bonus(c, s) !== 0 && <em> {bonus(c, s) > 0 ? '+' : ''}{fmt(bonus(c, s))} talents</em>}</span>
+      {onSpend && <button className="plus" disabled={c.sp < 1} onClick={() => onSpend(s)} aria-label={`Spend a skill point on ${STAT_LABEL[s]}`}>+1</button>}
     </div>
   );
+}
+export function StatGrid({ c, onSpend }: { c: Character; onSpend?: (s: Stat) => void }) {
+  return <div className="stats">{STATS.map((s) => <StatCard key={s} c={c} s={s} onSpend={onSpend} />)}</div>;
 }
 
 export const TalentChips = ({ c }: { c: Character }) => {
@@ -70,7 +110,7 @@ export function Fighter({ c, hp, max, side }: { c: Character; hp?: number; max?:
     <div className={'fighter ' + side}>
       <h3>{c.name}</h3>
       <p className="dim">Gen {c.gen} · Lv {levelOf(c.totalXp)}</p>
-      <Bar value={hp ?? maxHealth(c)} max={max ?? maxHealth(c)} cls="hp" />
+      <HpBar value={hp ?? maxHealth(c)} max={max ?? maxHealth(c)} />
       <p className="hpn">HP {hp ?? maxHealth(c)}/{max ?? maxHealth(c)}</p>
       <ul className="fstats">
         {STATS.map((s) => (
