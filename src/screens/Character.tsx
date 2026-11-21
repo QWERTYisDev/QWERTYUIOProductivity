@@ -3,7 +3,9 @@ import type { Character as Char, Game } from '../logic/types.ts';
 import { MAX_LEVEL, XP_PER_LEVEL, levelOf, xpInLevel } from '../logic/leveling.ts';
 import { maxHealth } from '../logic/character.ts';
 import { spendStat } from '../logic/game.ts';
-import { act, backupText, eraseAll, importBackup, toast } from '../store.ts';
+import { act, backupText, eraseAll, importBackup, markBackup, nav, toast } from '../store.ts';
+import { ACHIEVEMENTS, ACH_BY_ID, equipTitle } from '../logic/achievements.ts';
+import { statsOf } from '../logic/stats.ts';
 import { Panel, RoundDetail, StatGrid, TalentChips } from '../ui.tsx';
 
 function Sheet({ g }: { g: Game }) {
@@ -12,6 +14,7 @@ function Sheet({ g }: { g: Game }) {
   return (
     <>
       <Panel title={c.name} right={<span className="tag">Gen {c.gen}</span>}>
+        {g.title && <p className="ttl">« {ACH_BY_ID[g.title]?.title} »</p>}
         <p className="row"><span>Level</span><b>{lv}{lv >= MAX_LEVEL ? ' (max)' : ''}</b></p>
         <p className="row"><span>XP</span><b>{lv >= MAX_LEVEL ? 'MAX' : `${xpInLevel(c.totalXp)} / ${XP_PER_LEVEL}`}</b></p>
         <p className="row"><span>Health</span><b>{maxHealth(c)} <small className="dim">(10 base + {maxHealth(c) - 10} talents)</small></b></p>
@@ -68,6 +71,75 @@ function History({ g }: { g: Game }) {
   );
 }
 
+function Titles({ g }: { g: Game }) {
+  const got = ACHIEVEMENTS.filter((a) => g.achievements[a.id]).length;
+  return (
+    <Panel title="Achievements" right={<span className="tag">{got}/{ACHIEVEMENTS.length}</span>}>
+      <p className="dim">Cosmetic only. Equip a title to show it under your name.</p>
+      <div className="scrollbox">
+        {ACHIEVEMENTS.map((a) => {
+          const at = g.achievements[a.id];
+          return (
+            <div className={'task' + (at ? '' : ' off')} key={a.id}>
+              <span className="ticon">{at ? '🏆' : '🔒'}</span>
+              <div className="tbody"><b>{a.name}</b><p className="dim">{a.desc}</p><p className="rw">Title: {a.title}{at ? ` · ${new Date(at).toLocaleDateString()}` : ''}</p></div>
+              <div className="tact">
+                {at && (g.title === a.id
+                  ? <button className="btn ghost sm" onClick={() => act((x) => equipTitle(x, ''))}>Unequip</button>
+                  : <button className="btn sm" onClick={() => act((x) => equipTitle(x, a.id))}>Equip</button>)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </Panel>
+  );
+}
+
+function Bars({ data }: { data: { label: string; v: number }[] }) {
+  const max = Math.max(1, ...data.map((d) => d.v));
+  return (
+    <div className="chart">
+      {data.map((d, i) => (
+        <div className="col" key={i} title={`${d.label}: ${d.v}`}>
+          <span className="cv">{d.v || ''}</span>
+          <i style={{ height: `${(d.v / max) * 100}%` }} />
+          <small>{d.label}</small>
+        </div>
+      ))}
+    </div>
+  );
+}
+const Flow = ({ label, earned, spent }: { label: string; earned: number; spent: number }) => (
+  <div>
+    <p className="row"><span>{label}</span><span>earned {earned} · spent {spent}</span></p>
+    <div className="bar"><i style={{ width: `${earned ? (Math.min(spent, earned) / earned) * 100 : 0}%` }} /></div>
+  </div>
+);
+function StatsTab({ g }: { g: Game }) {
+  const s = statsOf(g, new Date());
+  const peak = Math.max(1, ...s.heat.map((h) => h.n));
+  return (
+    <>
+      <Panel title="Totals">
+        <div className="cur"><div><small>Quests</small><b>{s.quests}</b></div><div><small>Quest XP</small><b>{s.xp}</b></div><div><small>Battles</small><b>{g.battles.length}</b></div><div><small>Gen</small><b>{g.gen}</b></div></div>
+      </Panel>
+      <Panel title="XP, last 14 days"><Bars data={s.days.map((d) => ({ label: d.label, v: d.xp }))} /></Panel>
+      <Panel title="Quests per week"><Bars data={s.weeks.map((w) => ({ label: w.label, v: w.n }))} /></Panel>
+      <Panel title="Gold and Gems">
+        <Flow label="Gold" earned={s.goldIn} spent={s.goldOut} />
+        <Flow label="Gems" earned={s.gemsIn} spent={s.gemsOut} />
+        <p className="dim">The bar shows how much of what you earned has been spent.</p>
+      </Panel>
+      <Panel title="Activity, last 12 weeks">
+        <div className="heat">
+          {s.heat.map((h) => <i key={h.date} title={`${h.date}: ${h.n} quest${h.n === 1 ? '' : 's'}`} className={h.future ? 'fut' : ''} style={{ opacity: h.future ? 0.15 : h.n ? 0.3 + 0.7 * (h.n / peak) : 1 }} data-on={h.n > 0 ? '1' : '0'} />)}
+        </div>
+      </Panel>
+    </>
+  );
+}
+
 function System({ g }: { g: Game }) {
   const [text, setText] = useState('');
   const file = useRef<HTMLInputElement>(null);
@@ -77,17 +149,18 @@ function System({ g }: { g: Game }) {
     a.href = URL.createObjectURL(new Blob([backupText()], { type: 'application/json' }));
     a.download = stamp();
     a.click();
+    markBackup();
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   };
   const share = async () => {
     const f = new File([backupText()], stamp(), { type: 'application/json' });
     try {
-      if (navigator.canShare?.({ files: [f] })) await navigator.share({ files: [f] });
+      if (navigator.canShare?.({ files: [f] })) { await navigator.share({ files: [f] }); markBackup(); }
       else toast('Sharing files is not supported here. Use Copy.', 'info');
     } catch { /* user cancelled */ }
   };
   const copy = async () => {
-    try { await navigator.clipboard.writeText(backupText()); toast('Backup copied to clipboard.', 'good'); } catch { toast('Copy failed. Use Download.', 'bad'); }
+    try { await navigator.clipboard.writeText(backupText()); markBackup(); toast('Backup copied to clipboard.', 'good'); } catch { toast('Copy failed. Use Download.', 'bad'); }
   };
   const doImport = (t: string) => {
     if (!window.confirm('Replace ALL current progress with this backup?')) return;
@@ -96,7 +169,7 @@ function System({ g }: { g: Game }) {
   return (
     <>
       <Panel title="Backup">
-        <p className="dim">Progress is stored only in this browser on this device. It does not sync to other devices. Back up before changing the site URL or clearing Safari data.</p>
+        <p className="dim">Last backup: {g.lastBackup ? new Date(g.lastBackup).toLocaleDateString() : 'never'}. Progress is stored only in this browser on this device. It does not sync to other devices. Back up before changing the site URL or clearing Safari data.</p>
         <div className="three">
           <button className="btn" onClick={download}>Download</button>
           <button className="btn" onClick={share}>Share</button>
@@ -113,6 +186,7 @@ function System({ g }: { g: Game }) {
         <button className="btn ghost wide danger" onClick={() => window.confirm('Reset ALL data and start from the very beginning? This cannot be undone.') && eraseAll()}>Reset all data</button>
       </Panel>
       <Panel title="Preferences">
+        <label className="check"><input type="checkbox" checked={g.prefs.sound} onChange={(e) => act((x) => ({ ...x, prefs: { ...x.prefs, sound: e.target.checked } }))} /> Sound and haptics</label>
         <label className="check"><input type="checkbox" checked={g.prefs.anim} onChange={(e) => act((x) => ({ ...x, prefs: { ...x.prefs, anim: e.target.checked } }))} /> Animations</label>
       </Panel>
     </>
@@ -120,15 +194,17 @@ function System({ g }: { g: Game }) {
 }
 
 export default function CharacterScreen({ g }: { g: Game }) {
-  const [tab, setTab] = useState<'sheet' | 'archive' | 'history' | 'system'>('sheet');
+  const [tab, setTab] = useState<'sheet' | 'archive' | 'history' | 'titles' | 'stats' | 'system'>(() => { const t = nav.charTab; nav.charTab = 'sheet'; return t; });
   return (
     <>
       <div className="tabs">
-        {(['sheet', 'archive', 'history', 'system'] as const).map((k) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{k[0].toUpperCase() + k.slice(1)}</button>)}
+        {(['sheet', 'archive', 'history', 'titles', 'stats', 'system'] as const).map((k) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{k[0].toUpperCase() + k.slice(1)}</button>)}
       </div>
       {tab === 'sheet' && <Sheet g={g} />}
       {tab === 'archive' && <Archive g={g} />}
       {tab === 'history' && <History g={g} />}
+      {tab === 'titles' && <Titles g={g} />}
+      {tab === 'stats' && <StatsTab g={g} />}
       {tab === 'system' && <System g={g} />}
     </>
   );

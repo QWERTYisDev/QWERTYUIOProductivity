@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import type { Game, Task, TaskType } from '../logic/types.ts';
-import { DAYS, activeOn, blankTask, dateKey, deleteTask, isDone, saveTask, sortTasks, validateTask, type SortKey } from '../logic/tasks.ts';
+import type { Game, Sub, Task, TaskType } from '../logic/types.ts';
+import { uid } from '../logic/rand.ts';
+import { DAYS, TEMPLATES, activeOn, blankTask, dateKey, deleteTask, isDone, saveTask, sortTasks, validateTask, type SortKey } from '../logic/tasks.ts';
 import { act, toast } from '../store.ts';
 import { Modal, Panel, useSheet } from '../ui.tsx';
 import { TaskRow, useRecentlyDone } from './TaskRow.tsx';
@@ -13,9 +14,10 @@ function TaskForm({ initial, onClose, closing }: { initial: Task; onClose: () =>
   const [gems, setGems] = useState(String(initial.gems));
   const [gold, setGold] = useState(String(initial.gold));
   const [err, setErr] = useState('');
+  const [subs, setSubs] = useState<Sub[]>(initial.subs);
   const up = (p: Partial<Task>) => setT({ ...t, ...p });
   const submit = () => {
-    const out: Task = { ...t, name: t.name.trim(), xp: xp.trim() === '' ? NaN : Number(xp), gems: gems.trim() === '' ? NaN : Number(gems), gold: gold.trim() === '' ? NaN : Number(gold), days: t.type === 'weekly' ? t.days : [], dueDate: t.type === 'daily' ? '' : t.dueDate };
+    const out: Task = { ...t, name: t.name.trim(), xp: xp.trim() === '' ? NaN : Number(xp), gems: gems.trim() === '' ? NaN : Number(gems), gold: gold.trim() === '' ? NaN : Number(gold), subs: subs.map((s) => ({ ...s, text: s.text.trim() })).filter((s) => s.text), days: t.type === 'weekly' ? t.days : [], dueDate: t.type === 'daily' ? '' : t.dueDate };
     const e = validateTask(out);
     if (e) return setErr(e);
     act((g) => saveTask(g, out));
@@ -24,6 +26,16 @@ function TaskForm({ initial, onClose, closing }: { initial: Task; onClose: () =>
   };
   return (
     <Modal title={initial.name ? 'Edit Quest' : 'New Quest'} onClose={onClose} closing={closing}>
+      {!initial.name && (
+        <div>
+          <p className="dim">Quick start: tap a preset to fill the form, then adjust and save.</p>
+          <div className="chips">
+            {TEMPLATES.map((p) => (
+              <button key={p.name} type="button" className="chip" onClick={() => { setT({ ...t, name: p.name, type: p.type, icon: p.icon, days: p.days ?? t.days }); setXp(String(p.xp)); setGems(String(p.gems)); setGold('0'); }}>{p.icon} {p.name}</button>
+            ))}
+          </div>
+        </div>
+      )}
       <label>Name<input value={t.name} maxLength={60} onChange={(e) => up({ name: e.target.value })} /></label>
       <label>Description (optional)<textarea rows={2} value={t.desc} onChange={(e) => up({ desc: e.target.value })} /></label>
       <label>Type
@@ -51,6 +63,16 @@ function TaskForm({ initial, onClose, closing }: { initial: Task; onClose: () =>
       <div className="two">
         {t.type !== 'daily' && <label>{t.type === 'weekly' ? 'Last day (optional)' : 'Due date (optional)'}<input type="date" value={t.dueDate} onChange={(e) => up({ dueDate: e.target.value })} /></label>}
         <label>Due time (optional)<input type="time" value={t.dueTime} onChange={(e) => up({ dueTime: e.target.value })} /></label>
+      </div>
+      <div>
+        <p className="dim">Checklist (optional): the quest pays out when every item is checked.</p>
+        {subs.map((s, i) => (
+          <div className="subrow" key={s.id}>
+            <input value={s.text} maxLength={60} placeholder={`Item ${i + 1}`} onChange={(e) => setSubs(subs.map((x) => (x.id === s.id ? { ...x, text: e.target.value } : x)))} />
+            <button type="button" className="x" aria-label="Remove item" onClick={() => setSubs(subs.filter((x) => x.id !== s.id))}>✕</button>
+          </div>
+        ))}
+        {subs.length < 10 && <button type="button" className="btn ghost sm" onClick={() => setSubs([...subs, { id: uid(), text: '' }])}>+ Add checklist item</button>}
       </div>
       <div className="icons">{ICONS.map((i) => <button key={i} type="button" className={'ic' + (t.icon === i ? ' on' : '')} onClick={() => up({ icon: i })}>{i}</button>)}</div>
       {err && <p className="err">{err}</p>}

@@ -4,6 +4,7 @@ import { MAX_LEVEL, MAX_XP, XP_PER_LEVEL, levelOf, xpInLevel } from '../logic/le
 import { activeOn, dateKey, isDone, sortTasks } from '../logic/tasks.ts';
 import { bonus, effective, maxHealth } from '../logic/character.ts';
 import { HpBar, Panel, TalentChips, XpBar, fmt } from '../ui.tsx';
+import { ACH_BY_ID } from '../logic/achievements.ts';
 import { TaskRow, useRecentlyDone } from './TaskRow.tsx';
 
 function Boss({ g }: { g: Game }) {
@@ -64,6 +65,7 @@ export default function Home({ g, now, go }: { g: Game; now: Date; go: (s: strin
           <div className="lv"><small>LV</small><b>{lv}</b></div>
           <div className="grow">
             <h1>{c.name}</h1>
+            {g.title && <p className="ttl">« {ACH_BY_ID[g.title]?.title} »</p>}
             <p className="dim">{lv >= MAX_LEVEL ? 'Status: READY. The boss awaits.' : 'Status: Awakened, leveling'}</p>
           </div>
         </div>

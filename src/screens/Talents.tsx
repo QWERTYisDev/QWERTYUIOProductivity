@@ -3,7 +3,7 @@ import type { Game } from '../logic/types.ts';
 import { TALENTS, TALENT_BY_ID } from '../logic/talents.ts';
 import { REROLL_GEMS, eligible, meetsReq, owned } from '../logic/talentLogic.ts';
 import { openTalentHand, pickTalent, rerollHand } from '../logic/game.ts';
-import { act } from '../store.ts';
+import { act, buzz } from '../store.ts';
 import { Panel, TalentCard, TalentChips } from '../ui.tsx';
 
 let dealt = ''; // last offer that played the deal animation, so revisiting the tab does not replay it
@@ -20,6 +20,7 @@ function Hand({ offer, id }: { offer: string[]; id: string }) {
   const pick = (tid: string) => {
     if (picked) return;
     setPicked(tid);
+    buzz(); // vibration happens now, inside the tap
     setTimeout(() => act((x) => {
       const g2 = pickTalent(x, tid);
       return g2 === x ? { g: x } : { g: g2, ev: [{ t: 'talent', id: tid }] };
