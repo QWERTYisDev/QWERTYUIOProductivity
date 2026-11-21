@@ -46,8 +46,8 @@ export default function Home({ g, now, go }: { g: Game; now: Date; go: (s: strin
   const once = sortTasks(g.tasks.filter((t) => t.type === 'once' && !isDone(g, t, today)), 'due');
   const recurring = [...daily, ...weekly];
   const doneCount = recurring.filter((t) => isDone(g, t, today)).length;
-  const Group = ({ label, list }: { label: string; list: Task[] }) => (
-    <div className="group">
+  const group = (label: string, list: Task[]) => (
+    <div className="group" key={label}>
       <h4>{label}</h4>
       {list.length ? list.map((t) => <TaskRow key={t.id} t={t} g={g} now={now} />) : <p className="dim">None right now.</p>}
     </div>
@@ -81,9 +81,9 @@ export default function Home({ g, now, go }: { g: Game; now: Date; go: (s: strin
 
       <Panel title="Quests" right={<span className="tag">{doneCount}/{recurring.length} today</span>}>
         {g.tasks.length === 0 && <p className="dim">No quests yet. <button className="link" onClick={() => go('tasks')}>Create your first quest</button></p>}
-        <Group label="Daily" list={daily} />
-        <Group label="Weekly" list={weekly} />
-        <Group label="One-time" list={once} />
+        {group('Daily', daily)}
+        {group('Weekly', weekly)}
+        {group('One-time', once)}
       </Panel>
 
       <Boss g={g} />

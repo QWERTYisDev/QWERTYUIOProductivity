@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import type { Game, Task } from '../logic/types.ts';
 import { DAYS, activeOn, completeTask, dateKey, isDone, isOverdue, resetOnce } from '../logic/tasks.ts';
 import { act } from '../store.ts';
@@ -9,8 +10,14 @@ export function TaskRow({ t, g, now, onEdit, onDelete }: { t: Task; g: Game; now
   const done = isDone(g, t, dateKey(now));
   const live = activeOn(t, now);
   const late = isOverdue(t, g, now);
+  const was = useRef(done);
+  const [sweep, setSweep] = useState(false);
+  useEffect(() => {
+    if (done && !was.current) { setSweep(true); const id = setTimeout(() => setSweep(false), 1000); was.current = done; return () => clearTimeout(id); }
+    was.current = done;
+  }, [done]);
   return (
-    <div className={'task' + (done ? ' done' : '') + (!live ? ' off' : '') + (late ? ' late' : '')}>
+    <div className={'task' + (sweep ? ' sweep' : '') + (done ? ' done' : '') + (!live ? ' off' : '') + (late ? ' late' : '')}>
       <span className="ticon">{t.icon}</span>
       <div className="tbody">
         <b>{t.name}</b>
