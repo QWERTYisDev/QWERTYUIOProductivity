@@ -1,7 +1,7 @@
 import type { Game, Out, Stat } from './types.ts';
 import { INITIAL_BOSS, newCharacter, spendPoint } from './character.ts';
 import { STARTER_ITEMS } from './shop.ts';
-import { chooseTalent, openHand } from './talentLogic.ts';
+import { REROLL_GEMS, chooseTalent, openHand, rerollOffer } from './talentLogic.ts';
 
 export const SAVE_VERSION = 1;
 
@@ -31,4 +31,11 @@ export function pickTalent(g: Game, id: string | null): Game {
   if (!g.character) return g;
   const c = chooseTalent(g.character, id);
   return c ? { ...g, character: c } : g;
+}
+
+export function rerollHand(g: Game): Out {
+  if (!g.character) return { g };
+  const c = rerollOffer(g.character, g.gems);
+  if (!c) return { g, ev: [{ t: 'toast', kind: 'bad', text: `Re-roll needs ${REROLL_GEMS} Gems and an open hand.` }] };
+  return { g: { ...g, character: c, gems: g.gems - REROLL_GEMS } };
 }
