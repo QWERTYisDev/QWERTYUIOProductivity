@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { levelOf, MAX_LEVEL } from './logic/leveling.ts';
-import { dismissNote, eraseAll, importBackup, toast, useSnap } from './store.ts';
+import { act, dismissNote, eraseAll, importBackup, nav, snoozeBackup, toast, useSnap } from './store.ts';
+import { UNDO_MS, undoCompletion } from './logic/tasks.ts';
+import { FocusBar, FocusPicker } from './screens/Focus.tsx';
 import { Icon, Overlays, Panel, Toasts } from './ui.tsx';
 import Home from './screens/Home.tsx';
 import Tasks from './screens/Tasks.tsx';
@@ -48,8 +50,18 @@ export default function App() {
 
   useEffect(() => { if (!g.character) setScreen('home'); }, [g.character]);
 
+  // Undo bar: the latest completion stays undoable for 15 seconds
+  const latest = Object.entries(g.completions).reduce<[string, (typeof g.completions)[string]] | null>((m, e) => (!m || e[1].at > m[1].at ? e : m), null);
+  const undoLeft = latest && g.character && latest[1].charId === g.character.id ? UNDO_MS - (Date.now() - latest[1].at) : 0;
+  useEffect(() => {
+    if (undoLeft <= 0) return;
+    const id = setInterval(() => tick((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, [latest?.[0], undoLeft > 0]);
+
   if (fatal) return <Fatal {...fatal} />;
   const now = new Date();
+  const staleBackup = Date.now() - (g.lastBackup || g.startedAt) > 14 * 864e5 && Date.now() > g.backupSnooze;
   const c = g.character;
   const ready = !!c && levelOf(c.totalXp) >= MAX_LEVEL;
 
@@ -66,6 +78,14 @@ export default function App() {
       )}
       <main className="screen">
         {note && <div className="banner" onClick={dismissNote}>{note} (tap to dismiss)</div>}
+        <FocusBar />
+        {c && staleBackup && (
+          <div className="banner remind">
+            <span>It has been over 14 days since your last backup. Your data lives only in this browser.</span>
+            <button className="btn sm" onClick={() => { nav.charTab = 'system'; setScreen('character'); }}>Back up</button>
+            <button className="btn ghost sm" onClick={snoozeBackup}>Later</button>
+          </div>
+        )}
         {saveError && <div className="banner bad">{saveError} Export a backup if you can.</div>}
         {!c ? <Create g={g} /> : (
           <div key={screen} className="tab">
@@ -78,6 +98,14 @@ export default function App() {
           </div>
         )}
       </main>
+      {c && latest && undoLeft > 0 && (
+        <div className="undo">
+          <div className="grow"><small>[ QUEST CLEARED ]</small><b>{latest[1].name}</b></div>
+          <button className="btn sm" onClick={() => act((x) => undoCompletion(x, latest[0]))}>Undo</button>
+          <i key={latest[0]} style={{ ['--p' as string]: `${(undoLeft / UNDO_MS) * 100}%`, animationDuration: `${undoLeft}ms` } as CSSProperties} />
+        </div>
+      )}
+      <FocusPicker />
       <Toasts />
       <Overlays />
     </div>

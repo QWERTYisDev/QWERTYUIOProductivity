@@ -152,9 +152,15 @@ export function TalentCard({ t, delay = 0, onPick, note }: { t: Talent; delay?: 
   );
 }
 
-export function Fighter({ c, hp, max, side }: { c: Character; hp?: number; max?: number; side: 'l' | 'r' }) {
+export function Fighter({ c, hp, max, side, hit }: { c: Character; hp?: number; max?: number; side: 'l' | 'r'; hit?: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (hit && !calm()) ref.current?.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-5px)' }, { transform: 'translateX(5px)' }, { transform: 'translateX(-3px)' }, { transform: 'translateX(2px)' }, { transform: 'translateX(0)' }], { duration: 380, easing: 'ease-out' });
+  }, [hit]);
   return (
-    <div className={'fighter ' + side}>
+    <div className={'fighter ' + side} ref={ref}>
+      {hit ? <i key={hit} className="hitfx" /> : null}
+      {hit ? <b key={'d' + hit} className="dmg">-1</b> : null}
       <h3>{c.name}</h3>
       <p className="dim">Gen {c.gen} · Lv {levelOf(c.totalXp)}</p>
       <HpBar value={hp ?? maxHealth(c)} max={max ?? maxHealth(c)} />
@@ -172,9 +178,9 @@ export function Fighter({ c, hp, max, side }: { c: Character; hp?: number; max?:
 const side = (who: string, s: Stat, eff: number, flat: number, pct: number, match: number, rand: number, fin: number) => (
   <p className="calc"><b>{who}</b> {STAT_SHORT[s]} {fmt(eff)}{flat ? ` +${flat} talent` : ''}{pct ? ` +${pct}% talent` : ''}{match ? ' +25% matchup' : ''} {rand >= 0 ? '+' : ''}{rand} roll = <b>{fmt(fin)}</b></p>
 );
-export function RoundDetail({ r, pName, bName }: { r: Round; pName: string; bName: string }) {
+export function RoundDetail({ r, pName, bName, stag }: { r: Round; pName: string; bName: string; stag?: boolean }) {
   return (
-    <div className="round">
+    <div className={'round' + (stag ? ' stag' : '')}>
       {side(pName, r.pStat, r.pEff, r.pFlat, r.pPct, r.pMatch, r.pRand, r.pFinal)}
       {side(bName, r.bStat, r.bEff, r.bFlat, r.bPct, r.bMatch, r.bRand, r.bFinal)}
       <p className={'res ' + r.winner}>{r.winner === 'tie' ? 'Tie: no damage' : `${r.winner === 'p' ? pName : bName} wins the round (-1 HP to the other)`} · HP {r.pHp} / {r.bHp}</p>
