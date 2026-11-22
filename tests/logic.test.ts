@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { addXp, levelOf, xpInLevel } from '../src/logic/leveling.ts';
 import { newCharacter, effective, maxHealth, spendPoint, INITIAL_BOSS } from '../src/logic/character.ts';
 import { TALENTS, TALENT_BY_ID } from '../src/logic/talents.ts';
-import { eligible, openHand, chooseTalent, pickOffer, effectLines, reqLines } from '../src/logic/talentLogic.ts';
+import { eligible, openHand, chooseTalent, pickOffer, effectLines, reqLines, compareTalents, FAVOR_MULT } from '../src/logic/talentLogic.ts';
 import { freshGame, createHero } from '../src/logic/game.ts';
 import { blankTask, completeTask, saveTask, validateTask, activeOn, resetOnce, dateKey } from '../src/logic/tasks.ts';
 import { purchase, validateItem } from '../src/logic/shop.ts';
@@ -271,7 +271,8 @@ assert.ok(TALENTS.every((t) => (t.needs ?? []).every((id) => TALENT_BY_ID[id] &&
   const fav = { strong: true } as Record<string, true>;
   let a = 0, b = 0;
   for (let i = 0; i < 30000; i++) { const o = pickOffer(base, Math.random, fav); if (o.includes('strong')) a++; if (o.includes('nimble')) b++; }
-  assert.ok(a / b > 1.5 && a / b < 2.6, `ratio ${a / b}`); // about double
+  assert.equal(FAVOR_MULT, 4);
+  assert.ok(a / b > 2.8 && a / b < 4.4, `ratio ${a / b}`); // about 4x (a bit under, since a hand has only 3 slots)
   let g = { ...hero(), gems: 30 }; g.character = { ...g.character!, hands: 1 };
   assert.equal(favorTalent(g, 'strong').g, g); // not discovered yet
   g = { ...g, seenTalents: { strong: true } };
@@ -290,5 +291,13 @@ assert.ok(TALENTS.every((t) => (t.needs ?? []).every((id) => TALENT_BY_ID[id] &&
   const lines = reqLines(c, TALENT_BY_ID.war_cry, (id) => (id === 'brawler' ? 'Brawler' : '???'));
   assert.deepEqual(lines, [{ text: 'Base Strength 11+', ok: true }, { text: 'Talent: Brawler', ok: true }]);
   assert.deepEqual(reqLines(null, TALENT_BY_ID.executioner, () => '???').map((l) => l.text), ['Base Strength 14+', 'Talent: ???', 'Talent: ???']);
+}
+// --- catalogue order
+{
+  const mk = (id: string, name: string, rarity: 'common' | 'rare') => ({ id, name, rarity, desc: '', max: 1 as const });
+  const list = [mk('a', 'A', 'rare'), mk('e', 'E', 'rare'), mk('d', 'D', 'common'), mk('b', 'B', 'common'), mk('f', 'F', 'rare'), mk('c', 'C', 'common')];
+  assert.deepEqual(list.sort(compareTalents).map((t) => t.name), ['B', 'C', 'D', 'A', 'E', 'F']);
+  const all = [...TALENTS].sort(compareTalents);
+  assert.equal(all[0].rarity, 'common'); assert.equal(all[all.length - 1].rarity, 'legendary');
 }
 console.log('all logic tests passed');
