@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import type { Game } from '../logic/types.ts';
 import { TALENTS, TALENT_BY_ID } from '../logic/talents.ts';
-import { REROLL_GEMS, eligible, meetsReq, owned, reqLines } from '../logic/talentLogic.ts';
+import { REROLL_GEMS, RARITY_ORDER, eligible, meetsReq, owned, reqLines } from '../logic/talentLogic.ts';
 import { openTalentHand, pickTalent, rerollHand } from '../logic/game.ts';
 import { act, buzz, openTalent } from '../store.ts';
 import { Panel, TalentCard, TalentChips } from '../ui.tsx';
@@ -51,7 +51,10 @@ export default function Talents({ g }: { g: Game }) {
   const discovered = TALENTS.filter((t) => g.seenTalents[t.id]).length;
   const needle = q.trim().toLowerCase();
   // Undiscovered talents only match by rarity, so searching can never reveal their names.
-  const shown = TALENTS.filter((t) => !needle || (g.seenTalents[t.id] ? `${t.name} ${t.desc} ${t.rarity}` : t.rarity).toLowerCase().includes(needle));
+  // Common first, alphabetical within each rarity. Undiscovered ones follow the discovered ones of their rarity in fixed order, so their names are never hinted at.
+  const seen = (t: { id: string }) => !!g.seenTalents[t.id];
+  const sorted = [...TALENTS].sort((a, b) => RARITY_ORDER.indexOf(a.rarity) - RARITY_ORDER.indexOf(b.rarity) || Number(!seen(a)) - Number(!seen(b)) || (seen(a) ? a.name.localeCompare(b.name) : TALENTS.indexOf(a) - TALENTS.indexOf(b)));
+  const shown = sorted.filter((t) => !needle || (g.seenTalents[t.id] ? `${t.name} ${t.desc} ${t.rarity}` : t.rarity).toLowerCase().includes(needle));
   return (
     <>
       <Panel title="Talent Hands" right={<span className="tag">{c.hands} available</span>}>

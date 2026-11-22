@@ -54,9 +54,9 @@ export function TalentDetail() {
       <div>
         <h4 className="gh">Favor</h4>
         {g.favored[t.id]
-          ? <p className="ok">★ Favored: counts double in future Talent Hands until you pick it.</p>
+          ? <p className="ok">★ Favored: counts four times in future Talent Hands until you pick it.</p>
           : <>
-              <p className="dim">Spend {FAVOR_GEMS} Gems to double this talent's chance of appearing in future hands. The favor is used up when you pick it.</p>
+              <p className="dim">Spend {FAVOR_GEMS} Gems to make this talent four times as likely to appear in future hands. The favor is used up when you pick it.</p>
               <button className="btn wide" disabled={g.gems < FAVOR_GEMS || !c || have > 0} onClick={() => act((x) => favorTalent(x, t.id))}>Favor for {FAVOR_GEMS} Gems (you have {g.gems})</button>
             </>}
       </div>
