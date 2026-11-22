@@ -18,7 +18,7 @@ choose all listed files, and commit.
 | `public` | `/upload/main/public` | `manifest.json`, `sw.js`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png` |
 | `src` | `/upload/main/src` | `main.tsx`, `App.tsx`, `store.ts`, `ui.tsx`, `sound.ts`, `styles.css` |
 | `src/logic` | `/upload/main/src/logic` | `types.ts`, `rand.ts`, `talents.ts`, `leveling.ts`, `character.ts`, `talentLogic.ts`, `tasks.ts`, `shop.ts`, `battle.ts`, `game.ts`, `storage.ts`, `stats.ts`, `achievements.ts` |
-| `src/screens` | `/upload/main/src/screens` | `Home.tsx`, `Tasks.tsx`, `TaskRow.tsx`, `Focus.tsx`, `Shop.tsx`, `Create.tsx`, `Character.tsx`, `Talents.tsx`, `Battle.tsx` |
+| `src/screens` | `/upload/main/src/screens` | `Home.tsx`, `Tasks.tsx`, `TaskRow.tsx`, `Focus.tsx`, `TalentDetail.tsx`, `Shop.tsx`, `Create.tsx`, `Character.tsx`, `Talents.tsx`, `Battle.tsx` |
 | `tests` (optional) | `/upload/main/tests` | `logic.test.ts` |
 
 `.gitignore` is a hidden file; if Files hides it, create it on GitHub with "Add file > Create new file" and paste the contents.
@@ -51,7 +51,8 @@ If your repo already holds the old app, delete the old `src`, `public`, `package
 
 - **Undo:** a completed quest can be undone for 15 seconds. It reverses exactly what it paid (XP, Gems, Gold, and level-up rewards). It refuses if those rewards were already spent.
 - **Streaks:** daily quests show consecutive days completed. Display only: there is no streak bonus.
-- **Achievements and titles:** Character > Titles. Cosmetic only.
+- **Talents:** 55 in total, including a talent tree (some need other talents plus base stats). Each talent can be held only once, so an owned talent never shows up in a hand again. Hands favor common talents slightly (and 25 Gems "favors" a discovered talent: double weight until you pick it) (weights 100/70/45/28/18 for common to legendary). The catalogue shows only talents you have ever seen in a hand, across generations.
+- **Achievements and titles:** 50 in Character > Titles, searchable. Cosmetic only.
 - **Checklists and presets:** a quest with a checklist completes (and pays) when every item is checked. Presets fill the new-quest form.
 - **Stats:** Character > Stats. Gold/Gems "earned" is derived as current balance plus everything spent.
 - **Shop:** categories, favourites pinned on top, per-day limits and limited stock.
@@ -61,7 +62,7 @@ If your repo already holds the old app, delete the old `src`, `public`, `package
 
 ## Checks
 
-`npm test` runs `tests/logic.test.ts` (Node 22+): XP and multi-level-ups, cap, stat rolls, talents (45, requirements, stacking, hands), skill points, quest rewards and duplicates, shop, battle weights/matchups/fights/boss inheritance, backup round-trip.
+`npm test` runs `tests/logic.test.ts` (Node 22+): XP and multi-level-ups, cap, stat rolls, talents (55, tree requirements, stacking, hands), skill points, quest rewards and duplicates, shop, battle weights/matchups/fights/boss inheritance, backup round-trip.
 `npm run typecheck` type-checks the project.
 
 ## Manual checklist on the phone
