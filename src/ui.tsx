@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Character, Round, Stat, Talent } from './logic/types.ts';
 import { STATS, STAT_LABEL, STAT_SHORT } from './logic/types.ts';
 import { TALENT_BY_ID } from './logic/talents.ts';
+import { compareTalents } from './logic/talentLogic.ts';
 import { bonus, effective, maxHealth } from './logic/character.ts';
 import { MAX_LEVEL, MAX_XP, XP_PER_LEVEL, levelOf, xpInLevel } from './logic/leveling.ts';
 import { dismissLevelup, dismissReveal, dismissTalent, openTalent, useSnap } from './store.ts';
@@ -133,7 +134,7 @@ export const TalentChips = ({ c }: { c: Character }) => {
   c.talents.forEach((id) => (counts[id] = (counts[id] ?? 0) + 1));
   return (
     <div className="chips">
-      {Object.entries(counts).map(([id, n]) => (
+      {Object.entries(counts).sort(([a], [b]) => compareTalents(TALENT_BY_ID[a], TALENT_BY_ID[b])).map(([id, n]) => (
         <button key={id} className={'chip tchip r-' + TALENT_BY_ID[id]?.rarity} onClick={() => openTalent(id)} aria-label={`Talent details: ${TALENT_BY_ID[id]?.name ?? id}`}>
           {TALENT_BY_ID[id]?.name ?? id}{n > 1 ? ` ×${n}` : ''}
         </button>
