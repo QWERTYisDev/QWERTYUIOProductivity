@@ -109,7 +109,7 @@ export interface Game {
   battle: Battle | null;
   battles: BattleRecord[];
   prefs: { anim: boolean; sound: boolean };
-  favored: Record<string, true>; // talents with double hand weight until picked (25 Gems each)
+  favored: Record<string, true>; // talents with 4x hand weight until picked (25 Gems each)
   favorsBought: number;
   seenTalents: Record<string, true>; // every talent ever shown in a hand (any generation)
   subDone: Record<string, true>; // `${taskId}|${occurrence}|${subId}`

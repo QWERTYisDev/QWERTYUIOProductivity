@@ -46,14 +46,14 @@ export function pickTalent(g: Game, id: string | null): Game {
   return see({ ...g, character: c, favored }, id ? [id] : []);
 }
 
-/** Pays 25 Gems so a discovered talent counts double in future hands, until you pick it. */
+/** Pays 25 Gems so a discovered talent counts four times as often in future hands, until you pick it. */
 export function favorTalent(g: Game, id: string): Out {
   const bad = (text: string): Out => ({ g, ev: [{ t: 'toast', kind: 'bad', text }] });
   if (!g.seenTalents[id]) return { g };
   if (g.favored[id]) return bad('Already favored.');
   if (g.character?.talents.includes(id)) return bad('You already own this talent.');
   if (g.gems < FAVOR_GEMS) return bad(`Favoring costs ${FAVOR_GEMS} Gems.`);
-  return { g: { ...g, gems: g.gems - FAVOR_GEMS, favored: { ...g.favored, [id]: true }, favorsBought: g.favorsBought + 1 }, ev: [{ t: 'sfx', k: 'buy' }, { t: 'toast', kind: 'good', text: 'Talent favored: it now appears twice as often in hands.' }] };
+  return { g: { ...g, gems: g.gems - FAVOR_GEMS, favored: { ...g.favored, [id]: true }, favorsBought: g.favorsBought + 1 }, ev: [{ t: 'sfx', k: 'buy' }, { t: 'toast', kind: 'good', text: 'Talent favored: it now appears four times as often in hands.' }] };
 }
 
 export function rerollHand(g: Game): Out {

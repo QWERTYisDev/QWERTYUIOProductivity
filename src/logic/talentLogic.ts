@@ -11,13 +11,18 @@ export const eligible = (c: Character): Talent[] => TALENTS.filter((t) => meetsR
 export const RARITY_WEIGHT: Record<Rarity, number> = { common: 100, uncommon: 70, rare: 45, epic: 28, legendary: 18 };
 /** Up to 3 unique eligible talents, drawn by rarity weight. */
 export const FAVOR_GEMS = 25;
-/** A favored talent counts double in the draw. */
+export const FAVOR_MULT = 4;
+/** A favored talent's draw weight is multiplied by FAVOR_MULT. */
 export function pickOffer(c: Character, rnd: Rnd = Math.random, favored: Record<string, true> = {}): string[] {
   const pool = eligible(c);
   const out: string[] = [];
-  while (out.length < 3 && pool.length) out.push(pool.splice(pickWeighted(pool.map((t) => RARITY_WEIGHT[t.rarity] * (favored[t.id] ? 2 : 1)), rnd), 1)[0].id);
+  while (out.length < 3 && pool.length) out.push(pool.splice(pickWeighted(pool.map((t) => RARITY_WEIGHT[t.rarity] * (favored[t.id] ? FAVOR_MULT : 1)), rnd), 1)[0].id);
   return out;
 }
+
+export const RARITY_ORDER: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+/** Common first, then by rarity; alphabetical within a rarity. */
+export const compareTalents = (a: Talent, b: Talent) => RARITY_ORDER.indexOf(a.rarity) - RARITY_ORDER.indexOf(b.rarity) || a.name.localeCompare(b.name);
 
 /** Opens a hand: up to 3 random eligible talents, saved on the character so refreshing can't re-roll. */
 export function openHand(c: Character, rnd: Rnd = Math.random, favored: Record<string, true> = {}): Character {
