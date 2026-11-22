@@ -1,9 +1,9 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import type { Game } from '../logic/types.ts';
 import { TALENTS, TALENT_BY_ID } from '../logic/talents.ts';
-import { REROLL_GEMS, eligible, meetsReq, owned } from '../logic/talentLogic.ts';
+import { REROLL_GEMS, eligible, meetsReq, owned, reqLines } from '../logic/talentLogic.ts';
 import { openTalentHand, pickTalent, rerollHand } from '../logic/game.ts';
-import { act, buzz } from '../store.ts';
+import { act, buzz, openTalent } from '../store.ts';
 import { Panel, TalentCard, TalentChips } from '../ui.tsx';
 
 let dealt = ''; // last offer that played the deal animation, so revisiting the tab does not replay it
@@ -47,6 +47,11 @@ function Hand({ offer, id }: { offer: string[]; id: string }) {
 export default function Talents({ g }: { g: Game }) {
   const c = g.character!;
   const offer = c.offer;
+  const [q, setQ] = useState('');
+  const discovered = TALENTS.filter((t) => g.seenTalents[t.id]).length;
+  const needle = q.trim().toLowerCase();
+  // Undiscovered talents only match by rarity, so searching can never reveal their names.
+  const shown = TALENTS.filter((t) => !needle || (g.seenTalents[t.id] ? `${t.name} ${t.desc} ${t.rarity}` : t.rarity).toLowerCase().includes(needle));
   return (
     <>
       <Panel title="Talent Hands" right={<span className="tag">{c.hands} available</span>}>
@@ -72,13 +77,20 @@ export default function Talents({ g }: { g: Game }) {
         )}
       </Panel>
       <Panel title="Your Talents"><TalentChips c={c} /></Panel>
-      <Panel title={`Talent Catalog (${TALENTS.length})`}>
-        <p className="dim">Requirements use base stats only. Percent bonuses apply after flat bonuses.</p>
+      <Panel title="Talent Catalog" right={<span className="tag">{discovered}/{TALENTS.length} discovered</span>}>
+        <p className="dim">Talents appear here once they have been shown in a Talent Hand. Tap a discovered talent for details.</p>
+        <input type="search" className="search" placeholder="Search discovered talents…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search talents" />
         <div className="scrollbox cards">
-        {TALENTS.map((t) => {
-          const n = owned(c, t.id);
-          return <TalentCard key={t.id} t={t} note={`${n >= t.max ? 'Maxed' : meetsReq(c, t) ? 'Eligible' : 'Locked'} · owned ${n}/${t.max}`} />;
-        })}
+          {shown.length === 0 && <p className="dim">No talents match.</p>}
+          {shown.map((t) => {
+            if (!g.seenTalents[t.id]) {
+              // Sealed: name and effects stay hidden, requirements are public.
+              const lines = reqLines(c, t, (id) => (g.seenTalents[id] ? TALENT_BY_ID[id].name : '???'));
+              return <TalentCard key={t.id} t={{ ...t, name: '???', desc: '???' }} note={lines.length ? 'Requires: ' + lines.map((l) => `${l.ok ? '✓' : '✗'} ${l.text}`).join(' · ') : 'Requires: nothing'} />;
+            }
+            const n = owned(c, t.id);
+            return <TalentCard key={t.id} t={t} onPick={() => openTalent(t.id)} note={`${g.favored[t.id] ? '★ Favored · ' : ''}${n >= t.max ? 'Maxed' : meetsReq(c, t) ? 'Eligible' : 'Locked'} · owned ${n}/${t.max}`} />;
+          })}
         </div>
       </Panel>
     </>

@@ -72,12 +72,17 @@ function History({ g }: { g: Game }) {
 }
 
 function Titles({ g }: { g: Game }) {
+  const [q, setQ] = useState('');
+  const needle = q.trim().toLowerCase();
+  const list = ACHIEVEMENTS.filter((a) => !needle || `${a.name} ${a.title} ${a.desc}`.toLowerCase().includes(needle));
   const got = ACHIEVEMENTS.filter((a) => g.achievements[a.id]).length;
   return (
     <Panel title="Achievements" right={<span className="tag">{got}/{ACHIEVEMENTS.length}</span>}>
       <p className="dim">Cosmetic only. Equip a title to show it under your name.</p>
+      <input type="search" className="search" placeholder="Search titles and achievements…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search titles" />
       <div className="scrollbox">
-        {ACHIEVEMENTS.map((a) => {
+        {list.length === 0 && <p className="dim">No titles match.</p>}
+        {list.map((a) => {
           const at = g.achievements[a.id];
           return (
             <div className={'task' + (at ? '' : ' off')} key={a.id}>
