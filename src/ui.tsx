@@ -4,7 +4,7 @@ import { STATS, STAT_LABEL, STAT_SHORT } from './logic/types.ts';
 import { TALENT_BY_ID } from './logic/talents.ts';
 import { bonus, effective, maxHealth } from './logic/character.ts';
 import { MAX_LEVEL, MAX_XP, XP_PER_LEVEL, levelOf, xpInLevel } from './logic/leveling.ts';
-import { dismissLevelup, dismissReveal, dismissTalent, useSnap } from './store.ts';
+import { dismissLevelup, dismissReveal, dismissTalent, openTalent, useSnap } from './store.ts';
 
 export const fmt = (n: number) => String(+n.toFixed(2));
 
@@ -131,7 +131,15 @@ export const TalentChips = ({ c }: { c: Character }) => {
   if (!c.talents.length) return <p className="dim">No talents.</p>;
   const counts: Record<string, number> = {};
   c.talents.forEach((id) => (counts[id] = (counts[id] ?? 0) + 1));
-  return <div className="chips">{Object.entries(counts).map(([id, n]) => <span key={id} className={'chip r-' + TALENT_BY_ID[id]?.rarity}>{TALENT_BY_ID[id]?.name ?? id}{n > 1 ? ` ×${n}` : ''}</span>)}</div>;
+  return (
+    <div className="chips">
+      {Object.entries(counts).map(([id, n]) => (
+        <button key={id} className={'chip tchip r-' + TALENT_BY_ID[id]?.rarity} onClick={() => openTalent(id)} aria-label={`Talent details: ${TALENT_BY_ID[id]?.name ?? id}`}>
+          {TALENT_BY_ID[id]?.name ?? id}{n > 1 ? ` ×${n}` : ''}
+        </button>
+      ))}
+    </div>
+  );
 };
 
 export function TalentCard({ t, delay = 0, onPick, note }: { t: Talent; delay?: number; onPick?: () => void; note?: string }) {

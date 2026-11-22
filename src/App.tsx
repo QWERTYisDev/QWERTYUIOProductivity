@@ -3,6 +3,7 @@ import { levelOf, MAX_LEVEL } from './logic/leveling.ts';
 import { act, dismissNote, eraseAll, importBackup, nav, snoozeBackup, toast, useSnap } from './store.ts';
 import { UNDO_MS, undoCompletion } from './logic/tasks.ts';
 import { FocusBar, FocusPicker } from './screens/Focus.tsx';
+import { TalentDetail } from './screens/TalentDetail.tsx';
 import { Icon, Overlays, Panel, Toasts } from './ui.tsx';
 import Home from './screens/Home.tsx';
 import Tasks from './screens/Tasks.tsx';
@@ -106,6 +107,7 @@ export default function App() {
         </div>
       )}
       <FocusPicker />
+      <TalentDetail />
       <Toasts />
       <Overlays />
     </div>

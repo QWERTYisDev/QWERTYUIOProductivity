@@ -16,6 +16,7 @@ interface Snap {
   levelup: { level: number; levels: number } | null;
   reveal: Character | null;
   talentGot: string | null;
+  talentView: string | null;
   focus: { pick: string | null; run: { taskId: string; endsAt: number; mins: number } | null };
 }
 
@@ -23,7 +24,7 @@ const loaded = load();
 let snap: Snap = {
   game: loaded.game ?? freshGame(),
   fatal: loaded.error ? { error: loaded.error, raw: loaded.raw } : null,
-  saveError: null, note: loaded.note ?? null, toasts: [], levelup: null, reveal: null, talentGot: null, focus: { pick: null, run: null },
+  saveError: null, note: loaded.note ?? null, toasts: [], levelup: null, reveal: null, talentGot: null, talentView: null, focus: { pick: null, run: null },
 };
 // Existing saves get any achievements they already qualify for, silently.
 snap = { ...snap, game: unlock(snap.game).g };
@@ -32,7 +33,7 @@ snap = { ...snap, game: unlock(snap.game).g };
 export function sfx(k: Sfx) {
   if (!snap.game.prefs.sound) return;
   play(k);
-  if (k === 'clear' || k === 'level' || k === 'talent') haptic(k === 'clear' ? 15 : 35);
+  if (k === 'clear' || k === 'level' || k === 'talent' || k === 'stat') haptic(k === 'level' || k === 'talent' ? 35 : 15);
 }
 export const buzz = () => { if (snap.game.prefs.sound) haptic(40); };
 const subs = new Set<() => void>();
@@ -99,3 +100,7 @@ export const closeFocusPick = () => set({ focus: { ...snap.focus, pick: null } }
 export const startFocus = (taskId: string, mins: number) => set({ focus: { pick: null, run: { taskId, mins, endsAt: Date.now() + mins * 60000 } } });
 export const endFocus = () => set({ focus: { ...snap.focus, run: null } });
 export const achName = (id: string) => ACH_BY_ID[id]?.name ?? id;
+
+/** Talent detail window (shown from chips and the catalogue). */
+export const openTalent = (id: string) => set({ talentView: id });
+export const closeTalent = () => set({ talentView: null });

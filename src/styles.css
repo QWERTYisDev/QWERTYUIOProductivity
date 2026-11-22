@@ -406,3 +406,15 @@ body::before { content: ''; position: fixed; z-index: -1; left: 0; right: 0; top
 @keyframes hitf { from { opacity: 1; } to { opacity: 0; } }
 .dmg { position: absolute; left: 50%; top: 30px; font-size: 28px; font-weight: 800; color: #ff7b92; text-shadow: 0 0 14px #ff4d6a; pointer-events: none; animation: dmg 1s ease-out forwards; }
 @keyframes dmg { 0% { opacity: 0; transform: translate(-50%, 10px) scale(.7); } 20% { opacity: 1; transform: translate(-50%, 0) scale(1.15); } 100% { opacity: 0; transform: translate(-50%, -26px) scale(1); } }
+
+/* ===== talent chips, detail window, search ===== */
+.chip.tchip { min-height: 0; padding: 3px 9px; font-size: 12px; border-color: var(--rc); color: var(--rc); cursor: pointer; }
+.chip.tchip:active { filter: brightness(1.5); box-shadow: 0 0 10px var(--rc); }
+.tdetail { border: 1px solid var(--rc); background: var(--panel2); padding: 12px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 0 22px color-mix(in srgb, var(--rc) 30%, transparent), inset 0 0 18px color-mix(in srgb, var(--rc) 14%, transparent); }
+.tdetail .rar { font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--rc); }
+.tdetail h3 { font-size: 22px; color: var(--rc); text-shadow: 0 0 14px var(--rc); }
+.tlist { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.tlist li { padding: 5px 8px; background: var(--panel2); border-left: 2px solid var(--cyan); }
+.tlist li.ok { border-left-color: var(--green); } .tlist li.ok::after { content: ' ✓'; color: var(--green); }
+.tlist li.no { border-left-color: var(--red); color: #ff9fb0; } .tlist li.no::after { content: ' ✗'; color: var(--red); }
+.search { width: 100%; }
