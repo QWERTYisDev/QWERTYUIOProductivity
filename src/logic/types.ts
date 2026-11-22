@@ -14,6 +14,7 @@ export interface Talent {
   rarity: Rarity;
   desc: string;
   req?: Partial<StatMap>; // checked against BASE stats only
+  needs?: string[]; // talent tree: talents you must already own
   flat?: Partial<StatMap>;
   pct?: Partial<StatMap>; // percent
   health?: number;
@@ -108,6 +109,9 @@ export interface Game {
   battle: Battle | null;
   battles: BattleRecord[];
   prefs: { anim: boolean; sound: boolean };
+  favored: Record<string, true>; // talents with double hand weight until picked (25 Gems each)
+  favorsBought: number;
+  seenTalents: Record<string, true>; // every talent ever shown in a hand (any generation)
   subDone: Record<string, true>; // `${taskId}|${occurrence}|${subId}`
   achievements: Record<string, number>; // id -> unlocked at
   title: string; // equipped achievement id
@@ -122,5 +126,5 @@ export type Ev =
   | { t: 'levelup'; level: number; levels: number }
   | { t: 'reveal'; char: Character }
   | { t: 'talent'; id: string }
-  | { t: 'sfx'; k: 'clear' | 'buy' };
+  | { t: 'sfx'; k: 'clear' | 'buy' | 'stat' };
 export type Out = { g: Game; ev?: Ev[] };

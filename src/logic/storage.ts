@@ -1,5 +1,6 @@
 import type { Game } from './types.ts';
 import { freshGame, SAVE_VERSION } from './game.ts';
+import { TALENT_BY_ID } from './talents.ts';
 
 const KEY = 'system-rpg-save';
 const PREV = KEY + '.prev';
@@ -23,6 +24,15 @@ export function migrate(obj: any): Game {
   g.shop = g.shop.map((i) => ({ ...i, gems: i.gems ?? 0, cat: i.cat ?? '', fav: !!i.fav, limit: i.limit === 'daily' || i.limit === 'stock' ? i.limit : 'none', n: Number.isInteger(i.n) ? i.n : 1 }));
   g.purchases = g.purchases.map((p) => ({ ...p, gems: p.gems ?? 0 }));
   g.prefs = { anim: g.prefs?.anim !== false, sound: g.prefs?.sound !== false };
+  // Talents already owned or shown before the catalogue existed count as seen.
+  const seen: Record<string, true> = g.seenTalents && typeof g.seenTalents === 'object' ? { ...g.seenTalents } : {};
+  const add = (ids?: string[]) => (ids ?? []).forEach((id) => { if (TALENT_BY_ID[id]) seen[id] = true; });
+  add(g.character?.talents); add(g.character?.offer ?? []); add(g.boss.talents);
+  g.archive.forEach((a) => add(a.talents));
+  g.battles.forEach((b) => { add(b.player?.talents); add(b.boss?.talents); });
+  g.seenTalents = seen;
+  g.favored = Object.fromEntries(Object.keys(g.favored && typeof g.favored === 'object' ? g.favored : {}).filter((id) => TALENT_BY_ID[id]).map((id) => [id, true])) as Record<string, true>;
+  g.favorsBought = Number.isInteger(g.favorsBought) ? g.favorsBought : 0;
   g.subDone = g.subDone && typeof g.subDone === 'object' ? g.subDone : {};
   g.achievements = g.achievements && typeof g.achievements === 'object' ? g.achievements : {};
   g.title = typeof g.title === 'string' ? g.title : '';

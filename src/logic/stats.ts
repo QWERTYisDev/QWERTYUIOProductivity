@@ -6,7 +6,7 @@ const at = (d: Date, n: number) => { const x = new Date(d); x.setHours(12, 0, 0,
 /** Gold/Gems earned are derived: what you hold now plus everything spent (shop buys, talent re-rolls). */
 export function totals(g: Game) {
   const goldOut = g.purchases.reduce((a, p) => a + p.price, 0);
-  const gemsOut = g.purchases.reduce((a, p) => a + (p.gems ?? 0), 0) + g.rerolls * 10;
+  const gemsOut = g.purchases.reduce((a, p) => a + (p.gems ?? 0), 0) + g.rerolls * 10 + g.favorsBought * 25;
   return { goldIn: g.gold + goldOut, goldOut, gemsIn: g.gems + gemsOut, gemsOut };
 }
 
