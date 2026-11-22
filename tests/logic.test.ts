@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import { addXp, levelOf, xpInLevel } from '../src/logic/leveling.ts';
 import { newCharacter, effective, maxHealth, spendPoint, INITIAL_BOSS } from '../src/logic/character.ts';
-import { TALENTS } from '../src/logic/talents.ts';
-import { eligible, openHand, chooseTalent } from '../src/logic/talentLogic.ts';
+import { TALENTS, TALENT_BY_ID } from '../src/logic/talents.ts';
+import { eligible, openHand, chooseTalent, pickOffer, effectLines, reqLines } from '../src/logic/talentLogic.ts';
 import { freshGame, createHero } from '../src/logic/game.ts';
 import { blankTask, completeTask, saveTask, validateTask, activeOn, resetOnce, dateKey } from '../src/logic/tasks.ts';
 import { purchase, validateItem } from '../src/logic/shop.ts';
-import { rerollHand } from '../src/logic/game.ts';
+import { rerollHand, openTalentHand, pickTalent, spendStat, favorTalent } from '../src/logic/game.ts';
 import { BEATS, statWeights, pickOptions, startBattle, playRound, finishBattle, rollSide } from '../src/logic/battle.ts';
 import { migrate, exportJson, importJson } from '../src/logic/storage.ts';
 import { undoCompletion, toggleSub, streakOf, UNDO_MS } from '../src/logic/tasks.ts';
@@ -32,8 +32,15 @@ const hero = (g = freshGame()) => createHero(g, 'Tester').g;
 // --- stat rolls 5..15
 for (let i = 0; i < 500; i++) { const c = newCharacter('x', 1); for (const v of Object.values(c.base)) assert.ok(v >= 5 && v <= 15); }
 // --- talents
-assert.equal(TALENTS.length, 45);
-assert.equal(new Set(TALENTS.map((t) => t.id)).size, 45);
+assert.equal(TALENTS.length, 100);
+assert.equal(new Set(TALENTS.map((t) => t.id)).size, 100);
+assert.equal(new Set(TALENTS.map((t) => t.name)).size, 100);
+{ // every talent is reachable: with high base stats and repeated hands, the whole tree unlocks (so no dependency cycle or dead branch)
+  let c = { ...newCharacter('R', 1), base: { str: 30, agi: 30, fort: 30, mana: 30 } };
+  for (let guard = 0; guard < 200; guard++) { const next = eligible(c)[0]; if (!next) break; c = { ...c, talents: [...c.talents, next.id] }; }
+  assert.equal(c.talents.length, 100);
+}
+assert.ok(TALENTS.every((t) => (t.needs ?? []).every((id) => TALENT_BY_ID[id] && id !== t.id)));
 {
   const c = { ...newCharacter('T', 1), base: { str: 10, agi: 15, fort: 5, mana: 15 }, talents: ['strong', 'arcane_trickster', 'durable'] };
   assert.equal(effective(c, 'str'), 12);
@@ -50,6 +57,11 @@ assert.equal(new Set(TALENTS.map((t) => t.id)).size, 45);
   assert.equal(openHand(h).offer, offer); // no re-roll
   assert.equal(chooseTalent(h, TALENTS.find((t) => !offer.includes(t.id))!.id), null);
   const done = chooseTalent(h, offer[0])!; assert.equal(done.hands, 0); assert.equal(done.talents.length, 1);
+  // no duplicates: an owned talent leaves the pool
+  assert.ok(!eligible({ ...h, talents: ['strong'] }).some((t) => t.id === 'strong'));
+  assert.ok(TALENTS.every((t) => t.max === 1));
+  for (let i = 0; i < 300; i++) assert.ok(!pickOffer({ ...h, talents: ['strong', 'nimble'] }).some((id) => id === 'strong' || id === 'nimble'));
+  assert.equal(favorTalent({ ...freshGame(), gems: 50, seenTalents: { strong: true }, character: { ...h, talents: ['strong'] } }, 'strong').g.favored.strong, undefined);
   // stack limit
   const full = { ...h, hands: 1, offer: ['durable'], talents: ['durable', 'durable', 'durable'] };
   assert.equal(chooseTalent(full, 'durable'), null);
@@ -221,7 +233,62 @@ assert.equal(new Set(TALENTS.map((t) => t.id)).size, 45);
   const st = statsOf(g, now); assert.equal(st.days.length, 14); assert.equal(st.days[13].xp, 100); assert.equal(st.weeks[7].n, 1); assert.equal(st.heat.length, 84);
   assert.equal(st.heat.filter((h) => h.n > 0).length, 1); assert.equal(st.heat[0].date.length, 10);
   const u = unlock(g, now); assert.ok(u.g.achievements.first_quest); assert.equal(unlock(u.g, now).g, u.g); // idempotent
-  assert.ok(ACHIEVEMENTS.length >= 12);
+  assert.equal(ACHIEVEMENTS.length, 50); assert.equal(new Set(ACHIEVEMENTS.map((a) => a.title)).size, 50); assert.equal(new Set(ACHIEVEMENTS.map((a) => a.id)).size, 50);
   assert.equal(equipTitle(u.g, 'first_quest').title, 'first_quest'); assert.equal(equipTitle(u.g, 'streak_30').title, '');
+}
+// --- talent tree, weighting, seen catalogue, stat sfx
+{
+  const base = { ...newCharacter('T', 1), base: { str: 15, agi: 15, fort: 15, mana: 15 } };
+  assert.ok(!eligible(base).some((t) => t.id === 'war_cry')); // needs Brawler
+  assert.ok(eligible({ ...base, talents: ['brawler'] }).some((t) => t.id === 'war_cry'));
+  assert.ok(!eligible({ ...base, talents: ['war_cry'] }).some((t) => t.id === 'executioner')); // needs Crusher too
+  assert.ok(eligible({ ...base, talents: ['war_cry', 'crusher'] }).some((t) => t.id === 'executioner'));
+  assert.ok(!eligible({ ...base, base: { ...base.base, str: 10 }, talents: ['brawler'] }).some((t) => t.id === 'war_cry')); // stat req still applies
+  // weights: commons are more frequent, legendary still appears
+  const all = { ...base, talents: ['sage_mind', 'hex', 'brawler'] };
+  const cnt: Record<string, number> = { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0 };
+  for (let i = 0; i < 30000; i++) { const o = pickOffer(all); assert.equal(new Set(o).size, 3); o.forEach((id) => cnt[TALENT_BY_ID[id].rarity]++); }
+  assert.ok(cnt.legendary > 0 && cnt.common > cnt.legendary);
+  // per-card odds: a common card appears more often than an epic one
+  const perCard = (r: string) => cnt[r] / eligible(all).filter((t) => t.rarity === r).length;
+  assert.ok(perCard('common') > perCard('rare') && perCard('rare') > perCard('legendary'));
+  // seen catalogue persists across generations
+  let g = hero(); g.character = { ...g.character!, hands: 1, base: { str: 15, agi: 15, fort: 15, mana: 15 } };
+  g = openTalentHand(g); const offer = g.character!.offer!;
+  assert.ok(offer.every((id) => g.seenTalents[id]));
+  const seenBefore = Object.keys(g.seenTalents).length;
+  g = pickTalent(g, offer[0]); assert.equal(Object.keys(g.seenTalents).length, seenBefore);
+  g.character = null; g = createHero(g, 'Next').g; assert.ok(offer.every((id) => g.seenTalents[id])); // new generation keeps them
+  assert.ok(migrate({ ...g, seenTalents: undefined, boss: { ...g.boss, talents: ['strong'] } }).seenTalents.strong);
+  assert.deepEqual(effectLines(TALENT_BY_ID.war_cry), ['+15% Strength', 'Battle: +10% when using Strength against Fortitude']);
+  // stat spend emits the sound event
+  const sp = { ...g, character: { ...g.character!, sp: 1 } }; const sr = spendStat(sp, 'str');
+  assert.deepEqual(sr.ev, [{ t: 'sfx', k: 'stat' }]); assert.equal(spendStat(sr.g, 'str').ev, undefined);
+}
+// --- favor
+{
+  const base = { ...newCharacter('F', 1), base: { str: 15, agi: 15, fort: 15, mana: 15 } };
+  const fav = { strong: true } as Record<string, true>;
+  let a = 0, b = 0;
+  for (let i = 0; i < 30000; i++) { const o = pickOffer(base, Math.random, fav); if (o.includes('strong')) a++; if (o.includes('nimble')) b++; }
+  assert.ok(a / b > 1.5 && a / b < 2.6, `ratio ${a / b}`); // about double
+  let g = { ...hero(), gems: 30 }; g.character = { ...g.character!, hands: 1 };
+  assert.equal(favorTalent(g, 'strong').g, g); // not discovered yet
+  g = { ...g, seenTalents: { strong: true } };
+  const f = favorTalent(g, 'strong'); assert.deepEqual([f.g.gems, !!f.g.favored.strong, f.g.favorsBought], [5, true, 1]);
+  assert.equal(favorTalent(f.g, 'strong').g, f.g); // already favored
+  assert.equal(favorTalent({ ...g, gems: 24 }, 'strong').g.favored.strong, undefined); // too poor
+  assert.equal(totals(f.g).gemsOut, 25);
+  let h = { ...f.g, character: { ...f.g.character!, offer: ['strong', 'nimble', 'hardy'], hands: 1 } };
+  assert.equal(pickTalent(h, 'nimble').favored.strong, true); // other pick keeps the favor
+  assert.equal(pickTalent(h, 'strong').favored.strong, undefined); // picking it uses it up
+  assert.deepEqual(migrate({ ...g, favored: { nope: true, strong: true } }).favored, { strong: true });
+}
+// --- sealed talent requirements
+{
+  const c = { ...newCharacter('Q', 1), base: { str: 12, agi: 5, fort: 5, mana: 5 }, talents: ['brawler'] };
+  const lines = reqLines(c, TALENT_BY_ID.war_cry, (id) => (id === 'brawler' ? 'Brawler' : '???'));
+  assert.deepEqual(lines, [{ text: 'Base Strength 11+', ok: true }, { text: 'Talent: Brawler', ok: true }]);
+  assert.deepEqual(reqLines(null, TALENT_BY_ID.executioner, () => '???').map((l) => l.text), ['Base Strength 14+', 'Talent: ???', 'Talent: ???']);
 }
 console.log('all logic tests passed');
