@@ -51,7 +51,7 @@ If your repo already holds the old app, delete the old `src`, `public`, `package
 
 - **Undo:** a completed quest can be undone for 15 seconds. It reverses exactly what it paid (XP, Gems, Gold, and level-up rewards). It refuses if those rewards were already spent.
 - **Streaks:** daily quests show consecutive days completed. Display only: there is no streak bonus.
-- **Talents:** 100 in total, including a talent tree (some need other talents plus base stats). Each talent can be held only once, so an owned talent never shows up in a hand again. Hands favor common talents slightly (and 25 Gems "favors" a discovered talent: double weight until you pick it) (weights 100/70/45/28/18 for common to legendary). The catalogue shows only talents you have ever seen in a hand, across generations.
+- **Talents:** 100 in total, including a talent tree (some need other talents plus base stats). Each talent can be held only once, so an owned talent never shows up in a hand again. Hands favor common talents slightly (and 25 Gems "favors" a discovered talent: 4x weight until you pick it) (weights 100/70/45/28/18 for common to legendary). The catalogue shows only talents you have ever seen in a hand, across generations.
 - **Achievements and titles:** 50 in Character > Titles, searchable. Cosmetic only.
 - **Checklists and presets:** a quest with a checklist completes (and pays) when every item is checked. Presets fill the new-quest form.
 - **Stats:** Character > Stats. Gold/Gems "earned" is derived as current balance plus everything spent.
